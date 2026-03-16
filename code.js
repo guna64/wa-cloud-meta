@@ -57,6 +57,25 @@ function openFormGlobal() {
     const wabaId = props.getProperty("WA_WABA_ID") || DEFAULTS.WA_WABA_ID;
     const noNotif = props.getProperty("NO_HP_NOTIF") || DEFAULTS.NO_HP_NOTIF;
 
+    // Fetch display info dari Meta jika token/phoneId/wabaId sudah ada
+    let displayName = "";
+    let displayPhone = "";
+    let isConfigured = false;
+
+    if (token && phoneId && wabaId) {
+        try {
+            // Fetch phone number info
+            const phoneUrl = "https://graph.facebook.com/v18.0/" + phoneId + "?fields=display_phone_number,verified_name";
+            const phoneRes = UrlFetchApp.fetch(phoneUrl, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
+            if (phoneRes.getResponseCode() === 200) {
+                const phoneData = JSON.parse(phoneRes.getContentText());
+                displayName = phoneData.verified_name || "";
+                displayPhone = phoneData.display_phone_number || "";
+                isConfigured = true;
+            }
+        } catch (e) { }
+    }
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -65,6 +84,7 @@ function openFormGlobal() {
     body { font-family: sans-serif; padding: 16px; color: #333; }
     label { font-weight: bold; font-size: 13px; display: block; margin-top: 12px; margin-bottom: 4px; }
     input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    input:disabled { background: #f3f4f6; color: #6b7280; }
     button {
       background: #008CBA; color: white; padding: 11px; border: none;
       cursor: pointer; border-radius: 4px; margin-top: 16px;
@@ -72,29 +92,66 @@ function openFormGlobal() {
     }
     button:hover { background: #007B9E; }
     button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #6b7280; margin-top: 8px; }
+    button.secondary:hover { background: #4b5563; }
     #status { text-align: center; margin-top: 10px; font-weight: bold; color: green; }
+    .info-box { background: #e8f4f8; padding: 12px; border-radius: 4px; margin-bottom: 12px; border: 1px solid #bce8f1; }
+    .info-box strong { display: block; margin-bottom: 4px; color: #006494; }
   </style>
 </head>
 <body>
-  <label>WhatsApp Access Token:</label>
-  <input type="text" id="token" value="${token}" placeholder="EAAB...">
+  ${isConfigured ? `
+    <div class="info-box">
+      <strong>Akun Meta Terhubung:</strong>
+      <div>${displayName}</div>
+      <div style="font-size:12px;color:#555;">${displayPhone}</div>
+    </div>
+    <button class="secondary" onclick="showEditForm()">Edit Konfigurasi</button>
+  ` : `
+    <div id="editForm">
+      <label>WhatsApp Access Token:</label>
+      <input type="text" id="token" value="${token}" placeholder="EAAB...">
 
-  <label>Phone Number ID:</label>
-  <input type="text" id="phoneId" value="${phoneId}" placeholder="1234567890">
-  
-  <label>WhatsApp Business Account ID (WABA ID):</label>
-  <input type="text" id="wabaId" value="${wabaId}" placeholder="Untuk API Load Template">
+      <label>Phone Number ID:</label>
+      <input type="text" id="phoneId" value="${phoneId}" placeholder="1234567890">
+      
+      <label>WhatsApp Business Account ID (WABA ID):</label>
+      <input type="text" id="wabaId" value="${wabaId}" placeholder="Untuk API Load Template">
 
-  <label>Verify Token (Untuk Webhook):</label>
-  <input type="text" id="verifyToken" value="${verifyToken}" placeholder="my_secure_token">
+      <label>Verify Token (Untuk Webhook):</label>
+      <input type="text" id="verifyToken" value="${verifyToken}" placeholder="my_secure_token">
 
-  <label>Nomor HP Admin (Notifikasi):</label>
-  <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
+      <label>Nomor HP Admin (Notifikasi):</label>
+      <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
 
-  <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
+      <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
+    </div>
+  `}
   <div id="status"></div>
 
   <script>
+    function showEditForm() {
+      document.body.innerHTML = \`
+        <label>WhatsApp Access Token:</label>
+        <input type="text" id="token" value="${token}" placeholder="EAAB...">
+
+        <label>Phone Number ID:</label>
+        <input type="text" id="phoneId" value="${phoneId}" placeholder="1234567890">
+        
+        <label>WhatsApp Business Account ID (WABA ID):</label>
+        <input type="text" id="wabaId" value="${wabaId}" placeholder="Untuk API Load Template">
+
+        <label>Verify Token (Untuk Webhook):</label>
+        <input type="text" id="verifyToken" value="${verifyToken}" placeholder="my_secure_token">
+
+        <label>Nomor HP Admin (Notifikasi):</label>
+        <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
+
+        <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
+        <div id="status"></div>
+      \`;
+    }
+
     function simpan() {
       var btn = document.getElementById('btn');
       btn.disabled = true;
