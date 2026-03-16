@@ -21,7 +21,8 @@ const DEFAULTS = {
 const SHEET_EXCLUDE = ["FLP", "SETTING", "LOG"];
 
 const DATA_SAMPLING = [
-    { nama: "Admin", hp: "628000000000" },
+    { nama: "Eko Adiguna", hp: "6282313228875" },
+    { nama: "sisilia", hp: "6282197542932" }
 ];
 
 // ─── 1. MENU ─────────────────────────────────────────────────
@@ -640,10 +641,13 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
     
     for (const line of paramLines) {
         if (!line.trim()) continue;
-        const val = line.trim()
+        let val = line.trim()
             .replace(/\\[NAMA\\]/g, namaKonsumen)
             .replace(/\\[NAMA_SALES\\]/g, namaSales)
             .replace(/\\[HP_SALES\\]/g, hpSales);
+            
+        // DecodeURIComponent if text is percent-encoded from URL/Sheet
+        try { val = decodeURIComponent(val); } catch (e) { }
         
         bodyParams.push({
             type: "text",
