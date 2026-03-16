@@ -327,7 +327,7 @@ function openFormPerSheet() {
 
       '<label>Parameter Template (Isi 1 variabel per baris):</label>' +
       '<div class="info">Sesuai urutan variabel {{1}}, {{2}} di Meta.<br/>Variabel didukung: <code>[NAMA]</code>, <code>[NAMA_SALES]</code>, <code>[HP_SALES]</code></div>' +
-      '<textarea id="params_' + idx + '" placeholder="[NAMA]\n[NAMA_SALES]"></textarea>' +
+      '<textarea id="params_' + idx + '" placeholder="[NAMA]&#10;[NAMA_SALES]"></textarea>' +
       
       '<label>Header Image URL (Opsional):</label>' +
       '<div class="info">Hanya isi jika template memiliki Header tipe Image</div>' +
