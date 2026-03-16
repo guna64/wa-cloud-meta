@@ -34,6 +34,7 @@ function onOpen() {
         .addItem("🚀 Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
         .addItem("🧪 Test Kirim Template (Active Sheet)", "testKirim")
         .addItem("🐛 Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
+        .addItem("🔍 Cek Status Template Meta", "checkTemplateStatus")
         .addToUi();
 }
 
@@ -709,7 +710,7 @@ function testKirimDebugRamadan() {
                     parameters: [
                         {
                             type: "image",
-                            image: { link: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" }
+                            image: { link: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&q=80" } // Link JPG asli
                         }
                     ]
                 },
@@ -746,6 +747,49 @@ function testKirimDebugRamadan() {
         ui.showModalDialog(HtmlService.createHtmlOutput(html).setWidth(600).setHeight(400), "Debug promoh2_ramadan");
     } catch (e) {
         ui.alert("ERROR KONEKSI: " + e.toString());
+    }
+}
+
+function checkTemplateStatus() {
+    const ui = SpreadsheetApp.getUi();
+    const props = PropertiesService.getDocumentProperties();
+    const token = props.getProperty("WA_TOKEN");
+    const wabaId = props.getProperty("WA_WABA_ID");
+    
+    if (!token || !wabaId) {
+        ui.alert("Token atau WABA ID belum diatur!");
+        return;
+    }
+    
+    const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?name=promoh2_ramadan";
+    
+    try {
+        const res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
+        const json = JSON.parse(res.getContentText());
+        
+        if (json.data && json.data.length > 0) {
+            const t = json.data[0];
+            const fullJson = JSON.stringify(t, null, 2);
+            let info = "NAMA: " + t.name + "\\nSTATUS: " + t.status + "\\nBAHASA: " + t.language;
+            
+            if (t.status !== "APPROVED") {
+                info += "\\n\\n⚠️ PERHATIAN: Template belum di-APPROVED.";
+            } else {
+                info += "\\n\\n✅ Template sudah Approved.";
+            }
+            
+            const html = '<div style="font-family:sans-serif;">' +
+                         '<h3>' + info.replace(/\\n/g, '<br>') + '</h3>' +
+                         '<p>Salin JSON lengkap di bawah ini untuk saya analisa:</p>' +
+                         '<textarea style="width:100%;height:300px;font-family:monospace;">' + fullJson + '</textarea>' +
+                         '</div>';
+            
+            ui.showModalDialog(HtmlService.createHtmlOutput(html).setWidth(600).setHeight(500), "Struktur Lengkap Template");
+        } else {
+            ui.alert("Template 'promoh2_ramadan' tidak ditemukan di akun WABA Anda!");
+        }
+    } catch (e) {
+        ui.alert("Gagal mengecek status: " + e.toString());
     }
 }
 
