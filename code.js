@@ -185,6 +185,7 @@ function openFormPerSheet() {
     '      G.defaultDelMin = data.defaultDelMin;' +
     '      G.defaultDelMax = data.defaultDelMax;' +
     '      G.tList         = data.templateList;' +
+    '      G.templateError = data.templateError || "";' +
     '      buildUI();' +
     '      document.getElementById("loading").style.display = "none";' +
     '      document.getElementById("app").style.display = "block";' +
@@ -236,11 +237,12 @@ function openFormPerSheet() {
     '          "<input type=\\"number\\" id=\\"delayMax_" + idx + "\\" value=\\"" + cfgDelMax + "\\" min=\\"1\\" max=\\"300\\"> " +' +
     '          "<span>detik</span>" +' +
     '        "</div>" +' +
-    '        (tmplOpts ? "<div style=\\"margin-top:10px;background:#e8f4f8;padding:8px;border:1px solid #bce8f1;border-radius:4px;\\">" +' +
+    '        "<div style=\\"margin-top:10px;background:#e8f4f8;padding:8px;border:1px solid #bce8f1;border-radius:4px;\\">" +' +
     '            "<label style=\\"margin-top:0;\\">Pilih Template Meta:</label>" +' +
     '            "<select id=\\"tmplSelect_" + idx + "\\" onchange=\\"pilihTmpl(" + idx + ", this.value)\\">" +' +
     '              "<option value=\\"\\">-- Pilih Template Meta --</option>" + tmplOpts + "</select>" +' +
-    '          "</div>" : "") +' +
+    '            (tmplOpts ? "" : "<div style=\\"margin-top:6px;color:#b00020;font-size:12px;\\">" + (G.templateError || "Template Meta belum tersedia") + "</div>") +' +
+    '          "</div>" +' +
     '        "<div class=\\"flex-row\\" style=\\"margin-top:10px;\\">" +' +
     '          "<div class=\\"flex-col\\">" +' +
     '            "<label>Nama Template Meta:</label>" +' +
@@ -261,6 +263,15 @@ function openFormPerSheet() {
     '      panel.querySelector("#tplLang_" + idx).value = cfg.templateLang || "id";' +
     '      panel.querySelector("#params_" + idx).value  = cfg.params !== undefined ? cfg.params : G.defaultParams;' +
     '      panel.querySelector("#img_" + idx).value     = cfg.imageUrl || "";' +
+    '      var selInit = panel.querySelector("#tmplSelect_" + idx);' +
+    '      if (selInit && cfg.templateName && cfg.templateLang) {' +
+    '        for (var oi = 0; oi < selInit.options.length; oi++) {' +
+    '          var ov = selInit.options[oi].value || "";' +
+    '          if (ov.indexOf(cfg.templateName + "|" + cfg.templateLang + "|") === 0) {' +
+    '            selInit.selectedIndex = oi; break;' +
+    '          }' +
+    '        }' +
+    '      }' +
     '      tabContent.appendChild(panel);' +
     '    })(idx);' +
     '  }' +
@@ -358,30 +369,45 @@ function getSheetFormData() {
     const wabaId = props.getProperty("WA_WABA_ID");
 
     let templateList = [];
-    if (token && wabaId) {
+    let templateError = "";
+
+    if (!token || !wabaId) {
+        templateError = "WA_TOKEN / WA_WABA_ID belum diisi di Pengaturan Global.";
+    } else {
         try {
-            const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?fields=name,language,components&limit=100";
+            const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?fields=name,language,components,status&limit=100";
             const res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
-            if (res.getResponseCode() === 200) {
+            const status = res.getResponseCode();
+
+            if (status === 200) {
                 const json = JSON.parse(res.getContentText());
                 if (json.data) {
-                    templateList = json.data.map(t => {
-                        let bodyVarsCount = 0;
-                        let hasImage = false;
-                        if (t.components) {
-                            for (let c of t.components) {
-                                if (c.type === "BODY" && c.text) {
-                                    const match = c.text.match(/\{\{\d+\}\}/g);
-                                    if (match) bodyVarsCount = match.length;
+                    templateList = json.data
+                        .filter(t => (t.status || "APPROVED") === "APPROVED")
+                        .map(t => {
+                            let bodyVarsCount = 0;
+                            let hasImage = false;
+                            if (t.components) {
+                                for (let c of t.components) {
+                                    if (c.type === "BODY" && c.text) {
+                                        const match = c.text.match(/\{\{\d+\}\}/g);
+                                        if (match) bodyVarsCount = match.length;
+                                    }
+                                    if (c.type === "HEADER" && c.format === "IMAGE") hasImage = true;
                                 }
-                                if (c.type === "HEADER" && c.format === "IMAGE") hasImage = true;
                             }
-                        }
-                        return { name: t.name, lang: t.language, vars: bodyVarsCount, img: hasImage };
-                    });
+                            return { name: t.name, lang: t.language, vars: bodyVarsCount, img: hasImage };
+                        });
                 }
+                if (templateList.length === 0) {
+                    templateError = "Template APPROVED tidak ditemukan di WABA ini.";
+                }
+            } else {
+                templateError = "Gagal load template Meta (HTTP " + status + "). Cek token / WABA ID.";
             }
-        } catch (e) { }
+        } catch (e) {
+            templateError = "Error load template Meta: " + e.toString();
+        }
     }
 
     return {
@@ -390,7 +416,8 @@ function getSheetFormData() {
         defaultParams: DEFAULTS.TEMPLATE_PARAMS,
         defaultDelMin: parseInt(DEFAULTS.DELAY_MIN),
         defaultDelMax: parseInt(DEFAULTS.DELAY_MAX),
-        templateList : templateList
+        templateList : templateList,
+        templateError: templateError
     };
 }
 
