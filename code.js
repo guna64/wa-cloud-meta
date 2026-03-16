@@ -311,6 +311,8 @@ function openFormPerSheet() {
     '  btn.innerText = "Menyimpan...";' +
     '  var valid = true;' +
     '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
+    '    var isAktif = document.getElementById("aktif_" + idx).checked;' +
+    '    if (!isAktif) continue;' +
     '    var sel = document.getElementById("tmplSelect_" + idx);' +
     '    if (sel && !sel.value) {' +
     '      alert("Sheet \\\"" + G.daftarSheet[idx] + "\\\": wajib pilih Template Meta dulu!");' +
