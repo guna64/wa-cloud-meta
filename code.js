@@ -157,7 +157,7 @@ function openFormPerSheet() {
                             for (let c of t.components) {
                                 if (c.type === 'BODY' && c.text) {
                                     // Hitung kemunculan {{xx}} di teks body
-                                    const match = c.text.match(/\\{\\{\\d+\\}\\}/g);
+                                    const match = c.text.match(/\{\{\d+\}\}/g);
                                     if (match) bodyVarsCount = match.length;
                                 }
                                 if (c.type === 'HEADER' && c.format === 'IMAGE') {
@@ -761,7 +761,7 @@ function checkTemplateStatus() {
         return;
     }
     
-    const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?name=promoh2_ramadan";
+    const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?name=promo_h1_maret";
     
     try {
         const res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
@@ -864,9 +864,9 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
     for (const line of paramLines) {
         if (!line.trim()) continue;
         let val = line.trim()
-            .replace(/\\[NAMA\\]/g, namaKonsumen)
-            .replace(/\\[NAMA_SALES\\]/g, namaSales)
-            .replace(/\\[HP_SALES\\]/g, hpSales);
+            .replace(/\[NAMA\]/g, namaKonsumen)
+            .replace(/\[NAMA_SALES\]/g, namaSales)
+            .replace(/\[HP_SALES\]/g, hpSales);
             
         // DecodeURIComponent if text is percent-encoded from URL/Sheet
         try { val = decodeURIComponent(val); } catch (e) { }
