@@ -354,7 +354,7 @@ function openFormPerSheet() {
 
     // Bersihkan parameter jika ada perubahan template
     var paramArea = document.getElementById('params_' + idx);
-    var currentLines = paramArea.value.split('\\n').filter(l => l.trim() !== '');
+    var currentLines = paramArea.value.split(/\r?\n|\\n/).filter(l => l.trim() !== '');
     
     // Auto-generate placeholder
     var newParams = [];
@@ -369,7 +369,7 @@ function openFormPerSheet() {
             newParams.push(defaultVars[i] || '[CUSTOM_VAR]');
         }
     }
-    paramArea.value = newParams.join('\\n');
+    paramArea.value = newParams.join('\n');
 
     // Jika template butuh gambar tapi belum ada isi, kasih placeholder text URL
     var imgInput = document.getElementById('img_' + idx);
@@ -743,7 +743,7 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
     
     // Parse parameters
     const rawParams = cfg.params || "";
-    const paramLines = rawParams.split("\\n");
+    const paramLines = rawParams.split(/\r?\n|\\n/);
     const bodyParams = [];
     
     for (const line of paramLines) {
