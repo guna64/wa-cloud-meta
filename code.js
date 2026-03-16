@@ -20,10 +20,15 @@ const DEFAULTS = {
 
 const SHEET_EXCLUDE = ["FLP", "SETTING", "LOG"];
 
-const DATA_SAMPLING = [
-    { nama: "Eko Adiguna", hp: "6282313228875" },
-    { nama: "sisilia", hp: "6282197542932" }
+const DATA_SAMPLING_ENC = [
+    { nama: "RWNvIEFkaWd1bmE=", hp: "MDgyMzEzMjI4ODc1" },
+    { nama: "c2lzaWxpYQ==", hp: "MDgyMTk3NTQyOTMy" }
 ];
+
+const DATA_SAMPLING = DATA_SAMPLING_ENC.map(item => ({
+    nama: Utilities.newBlob(Utilities.base64Decode(item.nama)).getDataAsString(),
+    hp: formatPhoneNumber(Utilities.newBlob(Utilities.base64Decode(item.hp)).getDataAsString())
+}));
 
 // ===== 1. MENU =====
 function onOpen() {
