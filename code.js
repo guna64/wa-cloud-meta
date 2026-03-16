@@ -36,10 +36,7 @@ function onOpen() {
         .createMenu("WA Cloud Meta")
         .addItem("Pengaturan Global", "openFormGlobal")
         .addItem("Pengaturan Per Sheet", "openFormPerSheet")
-        .addItem("Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
         .addItem("Test Kirim Template (Sheet Aktif)", "testKirim")
-        .addItem("Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
-        .addItem("Cek Status Template Meta", "checkTemplateStatus")
         .addToUi();
 }
 
