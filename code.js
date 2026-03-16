@@ -1,5 +1,5 @@
-// ============================================================
-//  WA CLOUD META SENDER — LIBRARY VERSION
+﻿// ============================================================
+//  WA CLOUD META SENDER â€” LIBRARY VERSION
 //  Adaptasi fitur per-sheet untuk WhatsApp Cloud API (Meta)
 // ============================================================
 
@@ -25,20 +25,20 @@ const DATA_SAMPLING = [
     { nama: "sisilia", hp: "6282197542932" }
 ];
 
-// ─── 1. MENU ─────────────────────────────────────────────────
+// â”€â”€â”€ 1. MENU â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function onOpen() {
     SpreadsheetApp.getUi()
-        .createMenu("⚙️ WA Cloud Meta")
-        .addItem("⚙️ Pengaturan Global", "openFormGlobal")
-        .addItem("📋 Pengaturan Per Sheet", "openFormPerSheet")
-        .addItem("🚀 Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
-        .addItem("🧪 Test Kirim Template (Active Sheet)", "testKirim")
-        .addItem("🐛 Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
-        .addItem("🔍 Cek Status Template Meta", "checkTemplateStatus")
+        .createMenu("âš™ï¸ WA Cloud Meta")
+        .addItem("âš™ï¸ Pengaturan Global", "openFormGlobal")
+        .addItem("ðŸ“‹ Pengaturan Per Sheet", "openFormPerSheet")
+        .addItem("ðŸš€ Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
+        .addItem("ðŸ§ª Test Kirim Template (Active Sheet)", "testKirim")
+        .addItem("ðŸ› Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
+        .addItem("ðŸ” Cek Status Template Meta", "checkTemplateStatus")
         .addToUi();
 }
 
-// ─── 2. AMBIL DAFTAR SHEET DATA ──────────────────────────────
+// â”€â”€â”€ 2. AMBIL DAFTAR SHEET DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getDataSheets() {
     return SpreadsheetApp.getActiveSpreadsheet()
         .getSheets()
@@ -46,7 +46,7 @@ function getDataSheets() {
         .map(s => s.getName());
 }
 
-// ─── 3. POPUP PENGATURAN GLOBAL ──────────────────────────────
+// â”€â”€â”€ 3. POPUP PENGATURAN GLOBAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openFormGlobal() {
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN") || DEFAULTS.WA_TOKEN;
@@ -96,11 +96,11 @@ function openFormGlobal() {
     function simpan() {
       var btn = document.getElementById('btn');
       btn.disabled = true;
-      btn.innerText = '⏳ Menyimpan...';
+      btn.innerText = 'â³ Menyimpan...';
       google.script.run
         .withSuccessHandler(function(msg) {
           document.getElementById('status').innerText = msg;
-          btn.innerText = '✅ Berhasil!';
+          btn.innerText = 'âœ… Berhasil!';
           setTimeout(function() { google.script.host.close(); }, 1500);
         })
         .withFailureHandler(function(e) {
@@ -136,12 +136,218 @@ function simpanPengaturanGlobal(data) {
     return "Pengaturan global berhasil disimpan!";
 }
 
-// ─── 4. POPUP PENGATURAN PER SHEET ───────────────────────────
+// â”€â”€â”€ 4. POPUP PENGATURAN PER SHEET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openFormPerSheet() {
+    const html = '<!DOCTYPE html>' +
+    '<html><head><base target="_top"><style>' +
+    '* { box-sizing: border-box; }' +
+    'body { font-family: sans-serif; padding: 12px; color: #333; font-size: 13px; margin: 0; }' +
+    '.tab-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #008CBA; }' +
+    '.tab-btn { padding: 6px 14px; border: 1px solid #ccc; background: #f0f0f0; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; color: #555; }' +
+    '.tab-btn.active { background: #008CBA; color: white; border-color: #008CBA; }' +
+    '.tab-panel { display: none; }' +
+    '.tab-panel.active { display: block; }' +
+    'label { font-weight: bold; display: block; margin-top: 10px; margin-bottom: 3px; color: #444; }' +
+    'input[type="text"], select, textarea { width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; }' +
+    'input[type="number"] { padding: 7px; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 13px; }' +
+    'textarea { height: 75px; resize: none; }' +
+    '.toggle-wrap { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 4px; border: 1px solid #c8e6fa; }' +
+    '.toggle-wrap input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }' +
+    '.toggle-wrap span { font-weight: bold; color: #006494; }' +
+    '.delay-wrap { display: flex; align-items: center; gap: 8px; margin-top: 4px; }' +
+    '.delay-wrap input[type="number"] { width: 72px; }' +
+    '.delay-wrap span { color: #555; }' +
+    '.info { font-size: 11px; color: #555; background: #f9f9f9; padding: 6px 8px; border-left: 3px solid #008CBA; margin-bottom: 4px; line-height: 1.5; }' +
+    'code { background: #e0e0e0; padding: 1px 4px; border-radius: 3px; color: #c62828; font-weight: bold; }' +
+    '.btn-simpan { background: #008CBA; color: white; padding: 11px; border: none; cursor: pointer; border-radius: 4px; margin-top: 14px; font-weight: bold; width: 100%; font-size: 14px; }' +
+    '.btn-simpan:hover { background: #007B9E; }' +
+    '.btn-simpan:disabled { background: #ccc; cursor: not-allowed; }' +
+    '#status { text-align: center; margin-top: 8px; font-weight: bold; color: green; }' +
+    '.flex-row { display: flex; gap: 8px; }' +
+    '.flex-col { flex: 1; }' +
+    '#loading { text-align: center; padding: 40px; font-size: 14px; color: #555; }' +
+    '</style></head><body>' +
+    '<div id="loading">Memuat data konfigurasi...</div>' +
+    '<div id="app" style="display:none">' +
+    '  <div class="tab-bar" id="tabBar"></div>' +
+    '  <div id="tabContent"></div>' +
+    '  <button class="btn-simpan" id="btnSimpan" onclick="simpanSemua()">Simpan Semua Konfigurasi</button>' +
+    '  <div id="status"></div>' +
+    '</div>' +
+    '<script>' +
+    'var G = {};' +
+    'window.addEventListener("load", function() {' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data) {' +
+    '      G.daftarSheet   = data.daftarSheet;' +
+    '      G.allConfig     = data.allConfig;' +
+    '      G.defaultParams = data.defaultParams;' +
+    '      G.defaultDelMin = data.defaultDelMin;' +
+    '      G.defaultDelMax = data.defaultDelMax;' +
+    '      G.tList         = data.templateList;' +
+    '      buildUI();' +
+    '      document.getElementById("loading").style.display = "none";' +
+    '      document.getElementById("app").style.display = "block";' +
+    '    })' +
+    '    .withFailureHandler(function(e) {' +
+    '      document.getElementById("loading").innerHTML = "<b style=\\"color:red\\">Error: " + e + "</b>";' +
+    '    })' +
+    '    .getSheetFormData();' +
+    '});' +
+    'function buildUI() {' +
+    '  var tabBar     = document.getElementById("tabBar");' +
+    '  var tabContent = document.getElementById("tabContent");' +
+    '  var tmplOpts = "";' +
+    '  for (var t = 0; t < G.tList.length; t++) {' +
+    '    var tt = G.tList[t];' +
+    '    var valStr = tt.name + "|" + tt.lang + "|" + tt.vars + "|" + (tt.img ? "1" : "0");' +
+    '    tmplOpts += "<option value=\\"" + valStr + "\\">" + tt.name + " (" + tt.lang + ")</option>";' +
+    '  }' +
+    '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
+    '    (function(idx) {' +
+    '      var name    = G.daftarSheet[idx];' +
+    '      var cfg     = G.allConfig[name] || {};' +
+    '      var cfgDelMin = (cfg.delayMin !== undefined && cfg.delayMin !== "") ? parseInt(cfg.delayMin) : G.defaultDelMin;' +
+    '      var cfgDelMax = (cfg.delayMax !== undefined && cfg.delayMax !== "") ? parseInt(cfg.delayMax) : G.defaultDelMax;' +
+    '      var cfgJam    = parseInt(cfg.jam !== undefined ? cfg.jam : 8);' +
+    '      var btn = document.createElement("button");' +
+    '      btn.className = "tab-btn" + (idx === 0 ? " active" : "");' +
+    '      btn.innerText = name;' +
+    '      btn.onclick   = function() { switchTab(idx); };' +
+    '      tabBar.appendChild(btn);' +
+    '      var jamOptions = "";' +
+    '      for (var j = 0; j < 24; j++) {' +
+    '        jamOptions += "<option value=\\"" + j + "\\"" + (j === cfgJam ? " selected" : "") + ">" + (j < 10 ? "0" + j : j) + ":00</option>";' +
+    '      }' +
+    '      var panel = document.createElement("div");' +
+    '      panel.className = "tab-panel" + (idx === 0 ? " active" : "");' +
+    '      panel.id = "panel_" + idx;' +
+    '      panel.innerHTML =' +
+    '        "<div class=\\"toggle-wrap\\">" +' +
+    '          "<input type=\\"checkbox\\" id=\\"aktif_" + idx + "\\"" + (cfg.aktif !== false ? " checked" : "") + ">" +' +
+    '          "<span>Aktifkan pengiriman untuk sheet ini</span>" +' +
+    '        "</div>" +' +
+    '        "<label>Jam Kirim Otomatis:</label>" +' +
+    '        "<select id=\\"jam_" + idx + "\\">" + jamOptions + "</select>" +' +
+    '        "<label>Delay Antar Pesan (detik):</label>" +' +
+    '        "<div class=\\"delay-wrap\\">" +' +
+    '          "<input type=\\"number\\" id=\\"delayMin_" + idx + "\\" value=\\"" + cfgDelMin + "\\" min=\\"1\\" max=\\"300\\"> " +' +
+    '          "<span>s/d</span> " +' +
+    '          "<input type=\\"number\\" id=\\"delayMax_" + idx + "\\" value=\\"" + cfgDelMax + "\\" min=\\"1\\" max=\\"300\\"> " +' +
+    '          "<span>detik</span>" +' +
+    '        "</div>" +' +
+    '        (tmplOpts ? "<div style=\\"margin-top:10px;background:#e8f4f8;padding:8px;border:1px solid #bce8f1;border-radius:4px;\\">" +' +
+    '            "<label style=\\"margin-top:0;\\">Pilih Template Meta:</label>" +' +
+    '            "<select id=\\"tmplSelect_" + idx + "\\" onchange=\\"pilihTmpl(" + idx + ", this.value)\\">" +' +
+    '              "<option value=\\"\\">-- Ketik Manual di Bawah --</option>" + tmplOpts + "</select>" +' +
+    '          "</div>" : "") +' +
+    '        "<div class=\\"flex-row\\" style=\\"margin-top:10px;\\">" +' +
+    '          "<div class=\\"flex-col\\">" +' +
+    '            "<label>Nama Template Meta:</label>" +' +
+    '            "<input type=\\"text\\" id=\\"tplName_" + idx + "\\" placeholder=\\"promo_merdeka\\">" +' +
+    '          "</div>" +' +
+    '          "<div class=\\"flex-col\\">" +' +
+    '            "<label>Kode Bahasa:</label>" +' +
+    '            "<input type=\\"text\\" id=\\"tplLang_" + idx + "\\" placeholder=\\"id / en_US\\">" +' +
+    '          "</div>" +' +
+    '        "</div>" +' +
+    '        "<label>Parameter Template (1 variabel per baris):</label>" +' +
+    '        "<div class=\\"info\\">Urutan variabel {{1}}, {{2}} di Meta.<br/>Variabel: <code>[NAMA]</code>, <code>[NAMA_SALES]</code>, <code>[HP_SALES]</code></div>" +' +
+    '        "<textarea id=\\"params_" + idx + "\\" rows=\\"3\\"></textarea>" +' +
+    '        "<label>Header Image URL (Opsional):</label>" +' +
+    '        "<div class=\\"info\\">Isi jika template memiliki Header Image</div>" +' +
+    '        "<input type=\\"text\\" id=\\"img_" + idx + "\\" placeholder=\\"https://...gambar.jpg\\">";' +
+    '      panel.querySelector("#tplName_" + idx).value = cfg.templateName || "hello_world";' +
+    '      panel.querySelector("#tplLang_" + idx).value = cfg.templateLang || "id";' +
+    '      panel.querySelector("#params_" + idx).value  = cfg.params !== undefined ? cfg.params : G.defaultParams;' +
+    '      panel.querySelector("#img_" + idx).value     = cfg.imageUrl || "";' +
+    '      tabContent.appendChild(panel);' +
+    '    })(idx);' +
+    '  }' +
+    '}' +
+    'function switchTab(idx) {' +
+    '  var btns   = document.querySelectorAll(".tab-btn");' +
+    '  var panels = document.querySelectorAll(".tab-panel");' +
+    '  for (var i = 0; i < btns.length; i++) { btns[i].classList.toggle("active", i === idx); }' +
+    '  for (var i = 0; i < panels.length; i++) { panels[i].classList.toggle("active", i === idx); }' +
+    '}' +
+    'function pilihTmpl(idx, val) {' +
+    '  if (!val) return;' +
+    '  var parts = val.split("|");' +
+    '  var tName = parts[0], tLang = parts[1], varsCount = parseInt(parts[2] || 0), hasImg = parts[3] === "1";' +
+    '  document.getElementById("tplName_" + idx).value = tName;' +
+    '  document.getElementById("tplLang_" + idx).value = tLang;' +
+    '  var paramArea = document.getElementById("params_" + idx);' +
+    '  var currentLines = paramArea.value.split("\\n").filter(function(l) { return l.trim() !== ""; });' +
+    '  var defaultVars = ["[NAMA]", "[NAMA_SALES]", "[HP_SALES]"];' +
+    '  var newParams = [];' +
+    '  for (var i = 0; i < varsCount; i++) {' +
+    '    newParams.push((i < currentLines.length && currentLines[i]) ? currentLines[i] : (defaultVars[i] || "[CUSTOM_VAR]"));' +
+    '  }' +
+    '  paramArea.value = newParams.join("\\n");' +
+    '  var imgInput = document.getElementById("img_" + idx);' +
+    '  if (hasImg && imgInput.value.trim() === "") {' +
+    '    imgInput.value = "https://...taruh-link-gambar.jpg";' +
+    '    imgInput.style.border = "2px solid red";' +
+    '  } else if (!hasImg) {' +
+    '    imgInput.value = "";' +
+    '    imgInput.style.border = "1px solid #ccc";' +
+    '  }' +
+    '}' +
+    'function simpanSemua() {' +
+    '  var btn = document.getElementById("btnSimpan");' +
+    '  btn.disabled = true;' +
+    '  btn.innerText = "Menyimpan...";' +
+    '  var valid = true;' +
+    '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
+    '    var mn = parseInt(document.getElementById("delayMin_" + idx).value);' +
+    '    var mx = parseInt(document.getElementById("delayMax_" + idx).value);' +
+    '    if (isNaN(mn) || isNaN(mx) || mn < 1 || mx < 1 || mn > mx) {' +
+    '      alert("Sheet \\"" + G.daftarSheet[idx] + "\\": Delay min harus >= 1 dan min <= max!");' +
+    '      valid = false; break;' +
+    '    }' +
+    '  }' +
+    '  if (!valid) { btn.disabled = false; btn.innerText = "Simpan Semua Konfigurasi"; return; }' +
+    '  var result = {};' +
+    '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
+    '    var name = G.daftarSheet[idx];' +
+    '    result[name] = {' +
+    '      aktif       : document.getElementById("aktif_"    + idx).checked,' +
+    '      jam         : document.getElementById("jam_"      + idx).value,' +
+    '      delayMin    : parseInt(document.getElementById("delayMin_" + idx).value),' +
+    '      delayMax    : parseInt(document.getElementById("delayMax_" + idx).value),' +
+    '      templateName: document.getElementById("tplName_"  + idx).value.trim(),' +
+    '      templateLang: document.getElementById("tplLang_"  + idx).value.trim(),' +
+    '      params      : document.getElementById("params_"   + idx).value,' +
+    '      imageUrl    : document.getElementById("img_"      + idx).value.trim()' +
+    '    };' +
+    '  }' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(msg) {' +
+    '      document.getElementById("status").innerText = msg;' +
+    '      btn.innerText = "Berhasil!";' +
+    '      setTimeout(function() { google.script.host.close(); }, 1500);' +
+    '    })' +
+    '    .withFailureHandler(function(e) {' +
+    '      alert("Error: " + e);' +
+    '      btn.disabled = false;' +
+    '      btn.innerText = "Simpan Semua Konfigurasi";' +
+    '    })' +
+    '    .simpanKonfigurasiSheet(JSON.stringify(result));' +
+    '}' +
+    '<\/script></body></html>';
+
+    SpreadsheetApp.getUi().showModalDialog(
+        HtmlService.createHtmlOutput(html).setWidth(520).setHeight(700),
+        "Pengaturan Pesan Per Sheet (Meta API)"
+    );
+}
+
+function getSheetFormData() {
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN");
     const wabaId = props.getProperty("WA_WABA_ID");
-    
+
     let templateList = [];
     if (token && wabaId) {
         try {
@@ -155,14 +361,11 @@ function openFormPerSheet() {
                         let hasImage = false;
                         if (t.components) {
                             for (let c of t.components) {
-                                if (c.type === 'BODY' && c.text) {
-                                    // Hitung kemunculan {{xx}} di teks body
+                                if (c.type === "BODY" && c.text) {
                                     const match = c.text.match(/\{\{\d+\}\}/g);
                                     if (match) bodyVarsCount = match.length;
                                 }
-                                if (c.type === 'HEADER' && c.format === 'IMAGE') {
-                                    hasImage = true;
-                                }
+                                if (c.type === "HEADER" && c.format === "IMAGE") hasImage = true;
                             }
                         }
                         return { name: t.name, lang: t.language, vars: bodyVarsCount, img: hasImage };
@@ -172,282 +375,14 @@ function openFormPerSheet() {
         } catch (e) { }
     }
 
-    const daftarSheet = JSON.stringify(getDataSheets());
-    const allConfig = JSON.stringify(getAllSheetConfig());
-    const defaultParams = JSON.stringify(DEFAULTS.TEMPLATE_PARAMS);
-    const defaultDelMin = DEFAULTS.DELAY_MIN;
-    const defaultDelMax = DEFAULTS.DELAY_MAX;
-
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <base target="_top">
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: sans-serif; padding: 12px; color: #333; font-size: 13px; margin: 0; }
-    .tab-bar {
-      display: flex; flex-wrap: wrap; gap: 4px;
-      margin-bottom: 12px; padding-bottom: 8px;
-      border-bottom: 2px solid #008CBA;
-    }
-    .tab-btn {
-      padding: 6px 14px; border: 1px solid #ccc;
-      background: #f0f0f0; border-radius: 4px;
-      cursor: pointer; font-size: 12px; font-weight: bold; color: #555;
-    }
-    .tab-btn.active { background: #008CBA; color: white; border-color: #008CBA; }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-    label { font-weight: bold; display: block; margin-top: 10px; margin-bottom: 3px; color: #444; }
-    input[type="text"], select, textarea {
-      width: 100%; padding: 7px; border: 1px solid #ccc;
-      border-radius: 4px; font-family: sans-serif; font-size: 13px;
-    }
-    input[type="number"] {
-      padding: 7px; border: 1px solid #ccc;
-      border-radius: 4px; font-family: sans-serif; font-size: 13px;
-    }
-    textarea { height: 75px; resize: none; }
-    .toggle-wrap {
-      display: flex; align-items: center; gap: 8px;
-      margin-top: 10px; padding: 8px;
-      background: #f0f8ff; border-radius: 4px; border: 1px solid #c8e6fa;
-    }
-    .toggle-wrap input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-    .toggle-wrap span { font-weight: bold; color: #006494; }
-    .delay-wrap {
-      display: flex; align-items: center; gap: 8px; margin-top: 4px;
-    }
-    .delay-wrap input[type="number"] { width: 72px; }
-    .delay-wrap span { color: #555; }
-    .info {
-      font-size: 11px; color: #555; background: #f9f9f9;
-      padding: 6px 8px; border-left: 3px solid #008CBA;
-      margin-bottom: 4px; line-height: 1.5;
-    }
-    .info-delay {
-      font-size: 11px; color: #666; background: #fffbe6;
-      padding: 5px 8px; border-left: 3px solid #f0a500;
-      margin-top: 4px; line-height: 1.5; border-radius: 2px;
-    }
-    code { background: #e0e0e0; padding: 1px 4px; border-radius: 3px; color: #c62828; font-weight: bold; }
-    .btn-simpan {
-      background: #008CBA; color: white; padding: 11px; border: none;
-      cursor: pointer; border-radius: 4px; margin-top: 14px;
-      font-weight: bold; width: 100%; font-size: 14px;
-    }
-    .btn-simpan:hover { background: #007B9E; }
-    .btn-simpan:disabled { background: #ccc; cursor: not-allowed; }
-    #status { text-align: center; margin-top: 8px; font-weight: bold; color: green; }
-    .flex-row { display: flex; gap: 8px; }
-    .flex-col { flex: 1; }
-  </style>
-</head>
-<body>
-
-<div class="tab-bar" id="tabBar"></div>
-<div id="tabContent"></div>
-<button class="btn-simpan" id="btnSimpan" onclick="simpanSemua()">💾 Simpan Semua Konfigurasi</button>
-<div id="status"></div>
-
-<script>
-  var daftarSheet   = ${daftarSheet};
-  var allConfig     = ${allConfig};
-  var defaultParams = ${defaultParams};
-  var defaultDelMin = ${defaultDelMin};
-  var defaultDelMax = ${defaultDelMax};
-  var tList         = ${JSON.stringify(templateList)};
-  var tmplOpts      = tList.map(t => {
-      var valStr = t.name + '|' + t.lang + '|' + t.vars + '|' + (t.img ? '1' : '0');
-      return '<option value="' + valStr + '">' + t.name + ' (' + t.lang + ')</option>';
-  }).join('');
-
-  var tabBar     = document.getElementById('tabBar');
-  var tabContent = document.getElementById('tabContent');
-
-  daftarSheet.forEach(function(name, idx) {
-    var cfg        = allConfig[name] || { aktif: true, templateName: 'hello_world', templateLang: 'en_US', params: defaultParams, imageUrl: '', jam: '8', delayMin: defaultDelMin, delayMax: defaultDelMax };
-    var cfgDelMin  = (cfg.delayMin !== undefined && cfg.delayMin !== '') ? parseInt(cfg.delayMin) : defaultDelMin;
-    var cfgDelMax  = (cfg.delayMax !== undefined && cfg.delayMax !== '') ? parseInt(cfg.delayMax) : defaultDelMax;
-
-    var btn       = document.createElement('button');
-    btn.className = 'tab-btn' + (idx === 0 ? ' active' : '');
-    btn.innerText = name;
-    btn.onclick   = (function(i) { return function() { switchTab(i); }; })(idx);
-    tabBar.appendChild(btn);
-
-    var jamOptions = '';
-    for (var j = 0; j < 24; j++) {
-      var sel = (j == parseInt(cfg.jam)) ? 'selected' : '';
-      jamOptions += '<option value="' + j + '" ' + sel + '>' + (j < 10 ? '0' + j : j) + ':00</option>';
-    }
-
-    var panel       = document.createElement('div');
-    panel.className = 'tab-panel' + (idx === 0 ? ' active' : '');
-    panel.id        = 'panel_' + idx;
-
-    // Gunakan DOM API untuk set values aman (hindari HTML injection)
-    panel.innerHTML =
-      '<div class="toggle-wrap">' +
-        '<input type="checkbox" id="aktif_' + idx + '" ' + (cfg.aktif ? 'checked' : '') + '>' +
-        '<span>Aktifkan pengiriman untuk sheet ini</span>' +
-      '</div>' +
-
-      '<label>⏰ Jam Kirim Otomatis:</label>' +
-      '<select id="jam_' + idx + '">' + jamOptions + '</select>' +
-
-      '<label>⏱️ Delay Antar Pesan (detik):</label>' +
-      '<div class="delay-wrap">' +
-        '<input type="number" id="delayMin_' + idx + '" value="' + cfgDelMin + '" min="1" max="300"> ' +
-        '<span>s/d</span> ' +
-        '<input type="number" id="delayMax_' + idx + '" value="' + cfgDelMax + '" min="1" max="300"> ' +
-        '<span>detik</span>' +
-      '</div>' +
-
-      (tmplOpts ? 
-        '<div style="margin-top:10px; background:#e8f4f8; padding:8px; border:1px solid #bce8f1; border-radius:4px;">' +
-            '<label style="margin-top:0;">🔄 Pilih Template Meta (Otomatis load dari Meta):</label>' +
-            '<select id="tmplSelect_' + idx + '" onchange="pilihTmpl(' + idx + ', this.value)">' +
-                '<option value="">-- Ketik Manual di Bawah --</option>' +
-                tmplOpts +
-            '</select>' +
-        '</div>'
-      : '') +
-
-      '<div class="flex-row" style="margin-top:10px;">' +
-        '<div class="flex-col">' +
-            '<label>Nama Template Meta:</label>' +
-            '<input type="text" id="tplName_' + idx + '" placeholder="promo_merdeka">' +
-        '</div>' +
-        '<div class="flex-col">' +
-            '<label>Kode Bahasa:</label>' +
-            '<input type="text" id="tplLang_' + idx + '" placeholder="id / en_US">' +
-        '</div>' +
-      '</div>' +
-
-      '<label>Parameter Template (Isi 1 variabel per baris):</label>' +
-      '<div class="info">Sesuai urutan variabel {{1}}, {{2}} di Meta.<br/>Variabel didukung: <code>[NAMA]</code>, <code>[NAMA_SALES]</code>, <code>[HP_SALES]</code></div>' +
-      '<textarea id="params_' + idx + '" placeholder="[NAMA]&#10;[NAMA_SALES]"></textarea>' +
-      
-      '<label>Header Image URL (Opsional):</label>' +
-      '<div class="info">Hanya isi jika template memiliki Header tipe Image</div>' +
-      '<input type="text" id="img_' + idx + '" placeholder="https://...promo.jpg">';
-
-    // Set values via JS property (aman dari HTML injection)
-    panel.querySelector('#tplName_' + idx).value = cfg.templateName || 'hello_world';
-    panel.querySelector('#tplLang_' + idx).value = cfg.templateLang || 'id';
-    panel.querySelector('#params_' + idx).value  = cfg.params || defaultParams;
-    panel.querySelector('#img_' + idx).value     = cfg.imageUrl || '';
-
-    tabContent.appendChild(panel);
-  });
-
-  function switchTab(idx) {
-    document.querySelectorAll('.tab-btn').forEach(function(b, i) {
-      b.classList.toggle('active', i === idx);
-    });
-    document.querySelectorAll('.tab-panel').forEach(function(p, i) {
-      p.classList.toggle('active', i === idx);
-    });
-  }
-
-  function pilihTmpl(idx, val) {
-    if (!val) return;
-    var parts = val.split('|');
-    var name = parts[0];
-    var lang = parts[1];
-    var varsCount = parseInt(parts[2] || 0);
-    var hasImg = parts[3] === '1';
-
-    document.getElementById('tplName_' + idx).value = name;
-    document.getElementById('tplLang_' + idx).value = lang;
-
-    // Bersihkan parameter jika ada perubahan template
-    var paramArea = document.getElementById('params_' + idx);
-    var currentLines = paramArea.value.split(/\r?\n|\\n/).filter(l => l.trim() !== '');
-    
-    // Auto-generate placeholder
-    var newParams = [];
-    var defaultVars = ['[NAMA]', '[NAMA_SALES]', '[HP_SALES]'];
-    
-    for(var i = 0; i < varsCount; i++) {
-        // Coba pertahankan value lama jika jumlahnya masih sama/cukup
-        if(i < currentLines.length && currentLines[i]) {
-            newParams.push(currentLines[i]);
-        } else {
-            // Beri placeholder standard
-            newParams.push(defaultVars[i] || '[CUSTOM_VAR]');
-        }
-    }
-    paramArea.value = newParams.join('\n');
-
-    // Jika template butuh gambar tapi belum ada isi, kasih placeholder text URL
-    var imgInput = document.getElementById('img_' + idx);
-    if(hasImg && imgInput.value.trim() === '') {
-        imgInput.value = 'https://...taruh-link-gambar-di-sini.jpg';
-        imgInput.style.border = '2px solid red'; // Highlight ke user
-    } else if (!hasImg) {
-        imgInput.value = '';
-        imgInput.style.border = '1px solid #ccc';
-    }
-  }
-
-  function simpanSemua() {
-    var btn = document.getElementById('btnSimpan');
-    btn.disabled = true;
-    btn.innerText = '⏳ Menyimpan...';
-
-    // Validasi delay
-    var valid = true;
-    daftarSheet.forEach(function(name, idx) {
-      var mn = parseInt(document.getElementById('delayMin_' + idx).value);
-      var mx = parseInt(document.getElementById('delayMax_' + idx).value);
-      if (isNaN(mn) || isNaN(mx) || mn < 1 || mx < 1 || mn > mx) {
-        alert('Sheet "' + name + '": Delay min harus ≥ 1 dan min ≤ max!');
-        valid = false;
-      }
-    });
-    if (!valid) {
-      btn.disabled = false;
-      btn.innerText = '💾 Simpan Semua Konfigurasi';
-      return;
-    }
-
-    var result = {};
-    daftarSheet.forEach(function(name, idx) {
-      result[name] = {
-        aktif       : document.getElementById('aktif_'    + idx).checked,
-        jam         : document.getElementById('jam_'      + idx).value,
-        delayMin    : parseInt(document.getElementById('delayMin_' + idx).value),
-        delayMax    : parseInt(document.getElementById('delayMax_' + idx).value),
-        templateName: document.getElementById('tplName_'  + idx).value.trim(),
-        templateLang: document.getElementById('tplLang_'  + idx).value.trim(),
-        params      : document.getElementById('params_'   + idx).value,
-        imageUrl    : document.getElementById('img_'      + idx).value.trim(),
-      };
-    });
-
-    google.script.run
-      .withSuccessHandler(function(msg) {
-        document.getElementById('status').innerText = msg;
-        btn.innerText = '✅ Berhasil!';
-        setTimeout(function() { google.script.host.close(); }, 1500);
-      })
-      .withFailureHandler(function(e) {
-        alert('Error: ' + e);
-        btn.disabled = false;
-        btn.innerText = '💾 Simpan Semua Konfigurasi';
-      })
-      .simpanKonfigurasiSheet(JSON.stringify(result));
-  }
-</script>
-</body>
-</html>`;
-
-    SpreadsheetApp.getUi().showModalDialog(
-        HtmlService.createHtmlOutput(html).setWidth(520).setHeight(700),
-        "Pengaturan Pesan Per Sheet (Meta API)"
-    );
+    return {
+        daftarSheet  : getDataSheets(),
+        allConfig    : getAllSheetConfig(),
+        defaultParams: DEFAULTS.TEMPLATE_PARAMS,
+        defaultDelMin: parseInt(DEFAULTS.DELAY_MIN),
+        defaultDelMax: parseInt(DEFAULTS.DELAY_MAX),
+        templateList : templateList
+    };
 }
 
 function getAllSheetConfig() {
@@ -480,7 +415,7 @@ function simpanKonfigurasiSheet(dataJson) {
     return "Konfigurasi per sheet berhasil disimpan!";
 }
 
-// ─── 5. KIRIM SEMUA SHEET ────────────────────────────────────
+// â”€â”€â”€ 5. KIRIM SEMUA SHEET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function sendSemuaSheet() {
     const startTime = new Date().getTime();
     const props = PropertiesService.getDocumentProperties();
@@ -678,14 +613,14 @@ function testKirim() {
     }
     
     let successCount = 0;
-    ui.alert("⏳ Proses mengirim pesan test ke nomor sampling...");
+    ui.alert("â³ Proses mengirim pesan test ke nomor sampling...");
     
     DATA_SAMPLING.forEach(sample => {
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
         if (ok) successCount++;
     });
     
-    ui.alert("✅ Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " nomor sample.");
+    ui.alert("âœ… Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " nomor sample.");
 }
 
 function testKirimDebugRamadan() {
@@ -741,7 +676,7 @@ function testKirimDebugRamadan() {
     };
     
     try {
-        ui.alert("⏳ Memproses request debug...");
+        ui.alert("â³ Memproses request debug...");
         const response = UrlFetchApp.fetch(url, options);
         const code = response.getResponseCode();
         const text = response.getContentText();
@@ -781,9 +716,9 @@ function checkTemplateStatus() {
             let info = "NAMA: " + t.name + "\\nSTATUS: " + t.status + "\\nBAHASA: " + t.language;
             
             if (t.status !== "APPROVED") {
-                info += "\\n\\n⚠️ PERHATIAN: Template belum di-APPROVED.";
+                info += "\\n\\nâš ï¸ PERHATIAN: Template belum di-APPROVED.";
             } else {
-                info += "\\n\\n✅ Template sudah Approved.";
+                info += "\\n\\nâœ… Template sudah Approved.";
             }
             
             const html = '<div style="font-family:sans-serif;">' +
@@ -801,7 +736,7 @@ function checkTemplateStatus() {
     }
 }
 
-// ─── 6. TRIGGER MANAGEMENT ───────────────────────────────────
+// â”€â”€â”€ 6. TRIGGER MANAGEMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function setupTriggerHarian() {
     _deleteAllTriggers();
     const allConfig = getAllSheetConfig();
@@ -835,7 +770,7 @@ function _deleteAllTriggers() {
     });
 }
 
-// ─── 7. HELPERS META API ─────────────────────────────────────
+// â”€â”€â”€ 7. HELPERS META API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function _getUi() { try { return SpreadsheetApp.getUi(); } catch (e) { return null; } }
 
 function _buildSalesMap(sheet) {
@@ -959,7 +894,7 @@ function _sendWhatsAppMessage(phone, messageText, token, phoneId) {
 
 function _sendNotifikasi(no, counter, token, phoneId, hitLimit = false) {
     if (!no) return;
-    let msg = "*[LAPORAN HARIAN META API]*\\n✅ Berhasil: " + counter.success + "\\n❌ Gagal: " + counter.failed;
+    let msg = "*[LAPORAN HARIAN META API]*\\nâœ… Berhasil: " + counter.success + "\\nâŒ Gagal: " + counter.failed;
     
     // Ambil sisa kuota bulanan untuk diinformasikan
     const props = PropertiesService.getDocumentProperties();
@@ -967,10 +902,10 @@ function _sendNotifikasi(no, counter, token, phoneId, hitLimit = false) {
     let sisaKuota = DEFAULTS.MAX_MESSAGES - monthlyCount;
     if (sisaKuota < 0) sisaKuota = 0;
     
-    msg += "\\n📊 *Sisa Kuota Bulanan*: " + sisaKuota + " / " + DEFAULTS.MAX_MESSAGES + " pesan";
+    msg += "\\nðŸ“Š *Sisa Kuota Bulanan*: " + sisaKuota + " / " + DEFAULTS.MAX_MESSAGES + " pesan";
 
     if (hitLimit) {
-        msg += "\\n\\n⚠️ *PERHATIAN*: Batas maksimal " + DEFAULTS.MAX_MESSAGES + " pesan BULANAN telah tercapai. Sistem akan berhenti mengirim pesan hingga tanggal 1 bulan depan.";
+        msg += "\\n\\nâš ï¸ *PERHATIAN*: Batas maksimal " + DEFAULTS.MAX_MESSAGES + " pesan BULANAN telah tercapai. Sistem akan berhenti mengirim pesan hingga tanggal 1 bulan depan.";
     }
     _sendWhatsAppMessage(formatPhoneNumber(no), msg, token, phoneId);
 }
@@ -987,7 +922,7 @@ function formatPhoneNumber(phone) {
     return "62" + d;
 }
 
-// ─── 8. WEBHOOK HANDLER ──────────────────────────────────────
+// â”€â”€â”€ 8. WEBHOOK HANDLER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function doGet(e) {
     const props = PropertiesService.getDocumentProperties();
     const verifyToken = props.getProperty("WA_VERIFY_TOKEN") || DEFAULTS.WA_VERIFY_TOKEN;
@@ -1028,3 +963,4 @@ function doPost(e) {
         return ContentService.createTextOutput("error").setStatusCode(500);
     }
 }
+
