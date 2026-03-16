@@ -33,6 +33,7 @@ function onOpen() {
         .addItem("📋 Pengaturan Per Sheet", "openFormPerSheet")
         .addItem("🚀 Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
         .addItem("🧪 Test Kirim Template (Active Sheet)", "testKirim")
+        .addItem("🐛 Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
         .addToUi();
 }
 
@@ -676,6 +677,76 @@ function testKirim() {
     });
     
     ui.alert("✅ Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " nomor sample.");
+}
+
+function testKirimDebugRamadan() {
+    const ui = _getUi();
+    if (!ui) return;
+    
+    const props = PropertiesService.getDocumentProperties();
+    const token = props.getProperty("WA_TOKEN");
+    const phoneId = props.getProperty("WA_PHONE_ID");
+    
+    if (!token || !phoneId) {
+        ui.alert("Token & Phone ID belum disetting di Pengaturan Global!");
+        return;
+    }
+    
+    const sample = DATA_SAMPLING[0];
+    const url = "https://graph.facebook.com/v18.0/" + phoneId + "/messages";
+    
+    const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: sample.hp,
+        type: "template",
+        template: {
+            name: "promoh2_ramadan",
+            language: { code: "id" },
+            components: [
+                {
+                    type: "header",
+                    parameters: [
+                        {
+                            type: "image",
+                            image: { link: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" }
+                        }
+                    ]
+                },
+                {
+                    type: "body",
+                    parameters: [
+                        { type: "text", text: sample.nama }
+                    ]
+                }
+            ]
+        }
+    };
+    
+    const options = {
+        method: "post",
+        contentType: "application/json",
+        headers: { Authorization: "Bearer " + token },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+    };
+    
+    try {
+        ui.alert("⏳ Memproses request debug...");
+        const response = UrlFetchApp.fetch(url, options);
+        const code = response.getResponseCode();
+        const text = response.getContentText();
+        
+        const html = '<textarea style="width:100%;height:350px;font-family:monospace;">' + 
+                     'HTTP STATUS: ' + code + '\\n\\n' +
+                     '--RESPONSE META--\\n' + text + '\\n\\n' +
+                     '--PAYLOAD SENT--\\n' + JSON.stringify(payload, null, 2) + 
+                     '</textarea>';
+                     
+        ui.showModalDialog(HtmlService.createHtmlOutput(html).setWidth(600).setHeight(400), "Debug promoh2_ramadan");
+    } catch (e) {
+        ui.alert("ERROR KONEKSI: " + e.toString());
+    }
 }
 
 // ─── 6. TRIGGER MANAGEMENT ───────────────────────────────────
