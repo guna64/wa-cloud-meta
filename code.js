@@ -1,5 +1,5 @@
 ﻿// ============================================================
-//  WA CLOUD META SENDER â€” LIBRARY VERSION
+//  WA CLOUD META SENDER - LIBRARY VERSION
 //  Adaptasi fitur per-sheet untuk WhatsApp Cloud API (Meta)
 // ============================================================
 
@@ -25,20 +25,20 @@ const DATA_SAMPLING = [
     { nama: "sisilia", hp: "6282197542932" }
 ];
 
-// â”€â”€â”€ 1. MENU â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ===== 1. MENU =====
 function onOpen() {
     SpreadsheetApp.getUi()
-        .createMenu("âš™ï¸ WA Cloud Meta")
-        .addItem("âš™ï¸ Pengaturan Global", "openFormGlobal")
-        .addItem("ðŸ“‹ Pengaturan Per Sheet", "openFormPerSheet")
-        .addItem("ðŸš€ Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
-        .addItem("ðŸ§ª Test Kirim Template (Active Sheet)", "testKirim")
-        .addItem("ðŸ› Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
-        .addItem("ðŸ” Cek Status Template Meta", "checkTemplateStatus")
+        .createMenu("WA Cloud Meta")
+        .addItem("Pengaturan Global", "openFormGlobal")
+        .addItem("Pengaturan Per Sheet", "openFormPerSheet")
+        .addItem("Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
+        .addItem("Test Kirim Template (Sheet Aktif)", "testKirim")
+        .addItem("Debug Template (promoh2_ramadan)", "testKirimDebugRamadan")
+        .addItem("Cek Status Template Meta", "checkTemplateStatus")
         .addToUi();
 }
 
-// â”€â”€â”€ 2. AMBIL DAFTAR SHEET DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function getDataSheets() {
     return SpreadsheetApp.getActiveSpreadsheet()
         .getSheets()
@@ -46,7 +46,7 @@ function getDataSheets() {
         .map(s => s.getName());
 }
 
-// â”€â”€â”€ 3. POPUP PENGATURAN GLOBAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function openFormGlobal() {
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN") || DEFAULTS.WA_TOKEN;
@@ -96,11 +96,11 @@ function openFormGlobal() {
     function simpan() {
       var btn = document.getElementById('btn');
       btn.disabled = true;
-      btn.innerText = 'â³ Menyimpan...';
+      btn.innerText = 'Menyimpan...';
       google.script.run
         .withSuccessHandler(function(msg) {
           document.getElementById('status').innerText = msg;
-          btn.innerText = 'âœ… Berhasil!';
+          btn.innerText = 'Berhasil!';
           setTimeout(function() { google.script.host.close(); }, 1500);
         })
         .withFailureHandler(function(e) {
@@ -136,7 +136,7 @@ function simpanPengaturanGlobal(data) {
     return "Pengaturan global berhasil disimpan!";
 }
 
-// â”€â”€â”€ 4. POPUP PENGATURAN PER SHEET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function openFormPerSheet() {
     const html = '<!DOCTYPE html>' +
     '<html><head><base target="_top"><style>' +
@@ -339,7 +339,7 @@ function openFormPerSheet() {
 
     SpreadsheetApp.getUi().showModalDialog(
         HtmlService.createHtmlOutput(html).setWidth(520).setHeight(700),
-        "Pengaturan Pesan Per Sheet (Meta API)"
+        "Pengaturan Per Sheet (Meta API)"
     );
 }
 
@@ -415,7 +415,7 @@ function simpanKonfigurasiSheet(dataJson) {
     return "Konfigurasi per sheet berhasil disimpan!";
 }
 
-// â”€â”€â”€ 5. KIRIM SEMUA SHEET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function sendSemuaSheet() {
     const startTime = new Date().getTime();
     const props = PropertiesService.getDocumentProperties();
@@ -613,7 +613,7 @@ function testKirim() {
     }
     
     let successCount = 0;
-    ui.alert("â³ Proses mengirim pesan test ke nomor sampling...");
+    ui.alert("Proses mengirim pesan test ke nomor sampling...");
     
     DATA_SAMPLING.forEach(sample => {
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
@@ -676,7 +676,7 @@ function testKirimDebugRamadan() {
     };
     
     try {
-        ui.alert("â³ Memproses request debug...");
+        ui.alert("Memproses request debug...");
         const response = UrlFetchApp.fetch(url, options);
         const code = response.getResponseCode();
         const text = response.getContentText();
@@ -736,7 +736,7 @@ function checkTemplateStatus() {
     }
 }
 
-// â”€â”€â”€ 6. TRIGGER MANAGEMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function setupTriggerHarian() {
     _deleteAllTriggers();
     const allConfig = getAllSheetConfig();
@@ -770,7 +770,7 @@ function _deleteAllTriggers() {
     });
 }
 
-// â”€â”€â”€ 7. HELPERS META API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function _getUi() { try { return SpreadsheetApp.getUi(); } catch (e) { return null; } }
 
 function _buildSalesMap(sheet) {
@@ -922,7 +922,7 @@ function formatPhoneNumber(phone) {
     return "62" + d;
 }
 
-// â”€â”€â”€ 8. WEBHOOK HANDLER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ------------------------------
 function doGet(e) {
     const props = PropertiesService.getDocumentProperties();
     const verifyToken = props.getProperty("WA_VERIFY_TOKEN") || DEFAULTS.WA_VERIFY_TOKEN;
