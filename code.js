@@ -32,6 +32,7 @@ function onOpen() {
         .addItem("⚙️ Pengaturan Global", "openFormGlobal")
         .addItem("📋 Pengaturan Per Sheet", "openFormPerSheet")
         .addItem("🚀 Kirim Semua Sheet Hari Ini", "sendSemuaSheet")
+        .addItem("🧪 Test Kirim Template (Active Sheet)", "testKirim")
         .addToUi();
 }
 
@@ -490,6 +491,13 @@ function sendSemuaSheet() {
     const jamSekarang = new Date().getHours();
     const isManual = _isManualRun();
 
+    // Jika dijalankan manual (via menu), paksa reset state resume agar proses tidak nyangkut 
+    // di sisa antrean/timeout sheet waktu eksekusi sebelumnya.
+    if (isManual) {
+        props.deleteProperty("RESUME_STATE");
+        props.deleteProperty("RESUME_COUNTER");
+    }
+
     const lastSamplingDate = props.getProperty("LAST_SAMPLING_DATE");
     let samplingSudahDikirim = (lastSamplingDate === todayStr);
 
@@ -622,12 +630,52 @@ function sendSemuaSheet() {
     if (adaYangDiproses) {
         _showResult(ui, totalCounter);
     } else if (ui) {
-        ui.alert("Tidak ada sheet yang dijadwalkan pada jam " + jamSekarang + ":00");
+        ui.alert("Tidak ada sheet yang dijadwalkan pada jam " + jamSekarang + ":00, atau tidak ada data hari ini.");
     }
 }
 
 function _isManualRun() {
     try { SpreadsheetApp.getUi(); return true; } catch (e) { return false; }
+}
+
+function testKirim() {
+    const ui = _getUi();
+    if (!ui) return;
+    
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const sheetName = sheet.getName();
+    
+    if (SHEET_EXCLUDE.includes(sheetName)) {
+        ui.alert("Ini adalah sheet " + sheetName + ". Silakan buka sheet data (selain FLP/SETTING/LOG) untuk melakukan test!");
+        return;
+    }
+
+    const allConfig = getAllSheetConfig();
+    const cfg = allConfig[sheetName] || {};
+    
+    if (!cfg.templateName || !cfg.templateLang) {
+        ui.alert("Template untuk sheet " + sheetName + " belum diatur!");
+        return;
+    }
+    
+    const props = PropertiesService.getDocumentProperties();
+    const token = props.getProperty("WA_TOKEN");
+    const phoneId = props.getProperty("WA_PHONE_ID");
+    
+    if (!token || !phoneId) {
+        ui.alert("Token & Phone ID belum disetting di Pengaturan Global!");
+        return;
+    }
+    
+    let successCount = 0;
+    ui.alert("⏳ Proses mengirim pesan test ke nomor sampling...");
+    
+    DATA_SAMPLING.forEach(sample => {
+        let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
+        if (ok) successCount++;
+    });
+    
+    ui.alert("✅ Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " nomor sample.");
 }
 
 // ─── 6. TRIGGER MANAGEMENT ───────────────────────────────────
@@ -681,9 +729,13 @@ function _getSheetData(sheet) {
 }
 
 function _formatTanggal(raw, tz) {
-    return (raw instanceof Date)
-        ? Utilities.formatDate(raw, tz, "dd/MM/yyyy")
-        : (raw ? raw.toString().trim() : "");
+    if (raw instanceof Date) {
+        return Utilities.formatDate(raw, tz, "dd/MM/yyyy");
+    }
+    if (raw) {
+        return raw.toString().trim().replace(/-/g, '/');
+    }
+    return "";
 }
 
 function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, phoneId) {
