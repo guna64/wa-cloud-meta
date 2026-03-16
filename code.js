@@ -59,34 +59,27 @@ function openFormGlobal() {
     const extraSamplesRaw = props.getProperty("EXTRA_SAMPLES") || "[]";
 
     let extraSamples = [];
-    try {
-        extraSamples = JSON.parse(extraSamplesRaw);
-    } catch (e) { }
+    try { extraSamples = JSON.parse(extraSamplesRaw); } catch (e) { }
 
-    // Fetch display info dari Meta jika token/phoneId/wabaId sudah ada
-    let displayName = "";
-    let displayPhone = "";
-    let isConfigured = false;
-
+    let displayName = "Belum terhubung";
+    let displayPhone = "-";
     if (token && phoneId && wabaId) {
         try {
-            // Fetch phone number info
             const phoneUrl = "https://graph.facebook.com/v18.0/" + phoneId + "?fields=display_phone_number,verified_name";
             const phoneRes = UrlFetchApp.fetch(phoneUrl, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
             if (phoneRes.getResponseCode() === 200) {
                 const phoneData = JSON.parse(phoneRes.getContentText());
-                displayName = phoneData.verified_name || "";
-                displayPhone = phoneData.display_phone_number || "";
-                isConfigured = true;
+                displayName = phoneData.verified_name || displayName;
+                displayPhone = phoneData.display_phone_number || displayPhone;
             }
         } catch (e) { }
     }
 
-    const sampleRows = extraSamples.map((s, i) => 
+    const sampleRows = extraSamples.map((s, i) =>
         `<div style="display:flex;gap:8px;margin-bottom:6px;">
           <input type="text" id="sampleName_${i}" value="${s.nama || ''}" placeholder="Nama" style="flex:1;">
           <input type="text" id="sampleHp_${i}" value="${s.hp || ''}" placeholder="08xxx" style="flex:1;">
-          <button type="button" onclick="removeSample(${i})" style="padding:8px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Hapus</button>
+          <button type="button" onclick="removeSample(${i})" style="padding:8px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;width:auto;">Hapus</button>
         </div>`
     ).join('');
 
@@ -98,90 +91,76 @@ function openFormGlobal() {
     body { font-family: sans-serif; padding: 16px; color: #333; }
     label { font-weight: bold; font-size: 13px; display: block; margin-top: 12px; margin-bottom: 4px; }
     input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    input:disabled { background: #f3f4f6; color: #6b7280; }
-    button {
-      background: #008CBA; color: white; padding: 11px; border: none;
-      cursor: pointer; border-radius: 4px; margin-top: 16px;
-      font-weight: bold; width: 100%; font-size: 14px;
-    }
-    button:hover { background: #007B9E; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button.secondary { background: #6b7280; margin-top: 8px; }
-    button.secondary:hover { background: #4b5563; }
-    button.add { background: #10b981; margin-top: 8px; width: auto; padding: 8px 16px; }
-    button.add:hover { background: #059669; }
+    button { background: #008CBA; color: white; padding: 11px; border: none; cursor: pointer; border-radius: 4px; margin-top: 12px; font-weight: bold; width: 100%; font-size: 14px; }
+    button.secondary { background: #6b7280; }
+    button.add { background: #10b981; width: auto; padding: 8px 16px; margin-top: 8px; }
     #status { text-align: center; margin-top: 10px; font-weight: bold; color: green; }
     .info-box { background: #e8f4f8; padding: 12px; border-radius: 4px; margin-bottom: 12px; border: 1px solid #bce8f1; }
-    .info-box strong { display: block; margin-bottom: 4px; color: #006494; }
     .sample-section { background: #f9fafb; padding: 12px; border-radius: 4px; border: 1px solid #e5e7eb; margin-top: 12px; }
   </style>
 </head>
 <body>
-  ${isConfigured ? `
-    <div class="info-box">
-      <strong>Akun Meta Terhubung:</strong>
-      <div>${displayName}</div>
-      <div style="font-size:12px;color:#555;">${displayPhone}</div>
+  <div class="info-box">
+    <div><b>Akun Meta:</b> ${displayName}</div>
+    <div style="font-size:12px;color:#555;"><b>Nomor:</b> ${displayPhone}</div>
+  </div>
+
+  <button class="secondary" onclick="toggleEdit()" id="btnToggle">Edit Konfigurasi</button>
+
+  <div id="editForm" style="display:none; margin-top:10px;">
+    <label>WhatsApp Access Token:</label>
+    <input type="text" id="token" value="${token}" placeholder="EAAB...">
+
+    <label>Phone Number ID:</label>
+    <input type="text" id="phoneId" value="${phoneId}" placeholder="1234567890">
+
+    <label>WhatsApp Business Account ID (WABA ID):</label>
+    <input type="text" id="wabaId" value="${wabaId}" placeholder="Untuk API Load Template">
+
+    <label>Verify Token (Untuk Webhook):</label>
+    <input type="text" id="verifyToken" value="${verifyToken}" placeholder="my_secure_token">
+
+    <label>Nomor HP Admin (Notifikasi):</label>
+    <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
+
+    <div class="sample-section">
+      <label>Nomor Sample Tambahan (untuk Test Kirim):</label>
+      <div id="sampleContainer">${sampleRows}</div>
+      <button type="button" class="add" onclick="addSample()">+ Tambah Sample</button>
     </div>
-    <button class="secondary" onclick="showEditForm()">Edit Konfigurasi</button>
-  ` : `
-    <div id="editForm">
-      <label>WhatsApp Access Token:</label>
-      <input type="text" id="token" value="${token}" placeholder="EAAB...">
 
-      <label>Phone Number ID:</label>
-      <input type="text" id="phoneId" value="${phoneId}" placeholder="1234567890">
-      
-      <label>WhatsApp Business Account ID (WABA ID):</label>
-      <input type="text" id="wabaId" value="${wabaId}" placeholder="Untuk API Load Template">
+    <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
+  </div>
 
-      <label>Verify Token (Untuk Webhook):</label>
-      <input type="text" id="verifyToken" value="${verifyToken}" placeholder="my_secure_token">
-
-      <label>Nomor HP Admin (Notifikasi):</label>
-      <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
-
-      <div class="sample-section">
-        <label>Nomor Sample Tambahan (untuk Test Kirim):</label>
-        <div id="sampleContainer">${sampleRows}</div>
-        <button type="button" class="add" onclick="addSample()">+ Tambah Sample</button>
-      </div>
-
-      <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
-    </div>
-  `}
   <div id="status"></div>
 
   <script>
     var sampleCount = ${extraSamples.length};
-
+    function toggleEdit() {
+      var form = document.getElementById('editForm');
+      var btn = document.getElementById('btnToggle');
+      var shown = form.style.display !== 'none';
+      form.style.display = shown ? 'none' : 'block';
+      btn.innerText = shown ? 'Edit Konfigurasi' : 'Tutup Edit';
+    }
     function addSample() {
       var container = document.getElementById('sampleContainer');
       var div = document.createElement('div');
       div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;';
-      div.innerHTML = \`
-        <input type="text" id="sampleName_\${sampleCount}" placeholder="Nama" style="flex:1;">
-        <input type="text" id="sampleHp_\${sampleCount}" placeholder="08xxx" style="flex:1;">
-        <button type="button" onclick="removeSample(\${sampleCount})" style="padding:8px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Hapus</button>
-      \`;
+      div.innerHTML = '<input type="text" id="sampleName_' + sampleCount + '" placeholder="Nama" style="flex:1;">' +
+                      '<input type="text" id="sampleHp_' + sampleCount + '" placeholder="08xxx" style="flex:1;">' +
+                      '<button type="button" onclick="removeSample(' + sampleCount + ')" style="padding:8px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;width:auto;">Hapus</button>';
       container.appendChild(div);
       sampleCount++;
     }
-
     function removeSample(idx) {
       var el = document.getElementById('sampleName_' + idx);
       if (el && el.parentElement) el.parentElement.remove();
     }
-
-    function showEditForm() {
-      location.reload();
-    }
-
     function simpan() {
       var btn = document.getElementById('btn');
       btn.disabled = true;
       btn.innerText = 'Menyimpan...';
-
       var samples = [];
       for (var i = 0; i < sampleCount; i++) {
         var nameEl = document.getElementById('sampleName_' + i);
@@ -190,12 +169,11 @@ function openFormGlobal() {
           samples.push({ nama: nameEl.value.trim(), hp: hpEl.value.trim() });
         }
       }
-
       google.script.run
         .withSuccessHandler(function(msg) {
           document.getElementById('status').innerText = msg;
           btn.innerText = 'Berhasil!';
-          setTimeout(function() { google.script.host.close(); }, 1500);
+          setTimeout(function() { google.script.host.close(); }, 1200);
         })
         .withFailureHandler(function(e) {
           alert('Error: ' + e);
@@ -216,7 +194,7 @@ function openFormGlobal() {
 </html>`;
 
     SpreadsheetApp.getUi().showModalDialog(
-        HtmlService.createHtmlOutput(html).setWidth(520).setHeight(600),
+        HtmlService.createHtmlOutput(html).setWidth(560).setHeight(640),
         "Pengaturan Global Meta API"
     );
 }
@@ -743,16 +721,26 @@ function testKirim() {
         ui.alert("Token & Phone ID belum disetting di Pengaturan Global!");
         return;
     }
+
+    let extraSamples = [];
+    try {
+        extraSamples = JSON.parse(props.getProperty("EXTRA_SAMPLES") || "[]");
+    } catch (e) { }
+
+    const mergedSamples = [...DATA_SAMPLING, ...extraSamples.map(s => ({
+        nama: s.nama || "Sample",
+        hp: formatPhoneNumber(s.hp || "")
+    }))].filter(s => s.hp);
     
     let successCount = 0;
     ui.alert("Proses mengirim pesan test ke nomor sampling...");
     
-    DATA_SAMPLING.forEach(sample => {
+    mergedSamples.forEach(sample => {
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
         if (ok) successCount++;
     });
     
-    ui.alert("âœ… Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " nomor sample.");
+    ui.alert("Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " dari " + mergedSamples.length + " nomor sample.");
 }
 
 function testKirimDebugRamadan() {
