@@ -174,7 +174,7 @@ function openFormPerSheet() {
 
     const daftarSheet = JSON.stringify(getDataSheets());
     const allConfig = JSON.stringify(getAllSheetConfig());
-    const defaultParams = DEFAULTS.TEMPLATE_PARAMS.replace(/\n/g, "\\n");
+    const defaultParams = JSON.stringify(DEFAULTS.TEMPLATE_PARAMS);
     const defaultDelMin = DEFAULTS.DELAY_MIN;
     const defaultDelMax = DEFAULTS.DELAY_MAX;
 
@@ -253,7 +253,7 @@ function openFormPerSheet() {
 <script>
   var daftarSheet   = ${daftarSheet};
   var allConfig     = ${allConfig};
-  var defaultParams = \`${defaultParams}\`;
+  var defaultParams = ${defaultParams};
   var defaultDelMin = ${defaultDelMin};
   var defaultDelMax = ${defaultDelMax};
   var tList         = ${JSON.stringify(templateList)};
@@ -285,6 +285,8 @@ function openFormPerSheet() {
     var panel       = document.createElement('div');
     panel.className = 'tab-panel' + (idx === 0 ? ' active' : '');
     panel.id        = 'panel_' + idx;
+
+    // Gunakan DOM API untuk set values aman (hindari HTML injection)
     panel.innerHTML =
       '<div class="toggle-wrap">' +
         '<input type="checkbox" id="aktif_' + idx + '" ' + (cfg.aktif ? 'checked' : '') + '>' +
@@ -315,21 +317,27 @@ function openFormPerSheet() {
       '<div class="flex-row" style="margin-top:10px;">' +
         '<div class="flex-col">' +
             '<label>Nama Template Meta:</label>' +
-            '<input type="text" id="tplName_' + idx + '" value="' + (cfg.templateName || 'hello_world') + '" placeholder="promo_merdeka">' +
+            '<input type="text" id="tplName_' + idx + '" placeholder="promo_merdeka">' +
         '</div>' +
         '<div class="flex-col">' +
             '<label>Kode Bahasa:</label>' +
-            '<input type="text" id="tplLang_' + idx + '" value="' + (cfg.templateLang || 'id') + '" placeholder="id / en_US">' +
+            '<input type="text" id="tplLang_' + idx + '" placeholder="id / en_US">' +
         '</div>' +
       '</div>' +
 
       '<label>Parameter Template (Isi 1 variabel per baris):</label>' +
       '<div class="info">Sesuai urutan variabel {{1}}, {{2}} di Meta.<br/>Variabel didukung: <code>[NAMA]</code>, <code>[NAMA_SALES]</code>, <code>[HP_SALES]</code></div>' +
-      '<textarea id="params_' + idx + '" placeholder="[NAMA]\\n[NAMA_SALES]">' + (cfg.params || defaultParams) + '</textarea>'+
+      '<textarea id="params_' + idx + '" placeholder="[NAMA]\n[NAMA_SALES]"></textarea>' +
       
       '<label>Header Image URL (Opsional):</label>' +
       '<div class="info">Hanya isi jika template memiliki Header tipe Image</div>' +
-      '<input type="text" id="img_' + idx + '" value="' + (cfg.imageUrl || '') + '" placeholder="https://...promo.jpg">';
+      '<input type="text" id="img_' + idx + '" placeholder="https://...promo.jpg">';
+
+    // Set values via JS property (aman dari HTML injection)
+    panel.querySelector('#tplName_' + idx).value = cfg.templateName || 'hello_world';
+    panel.querySelector('#tplLang_' + idx).value = cfg.templateLang || 'id';
+    panel.querySelector('#params_' + idx).value  = cfg.params || defaultParams;
+    panel.querySelector('#img_' + idx).value     = cfg.imageUrl || '';
 
     tabContent.appendChild(panel);
   });
@@ -867,9 +875,6 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
             .replace(/\[NAMA\]/g, namaKonsumen)
             .replace(/\[NAMA_SALES\]/g, namaSales)
             .replace(/\[HP_SALES\]/g, hpSales);
-            
-        // DecodeURIComponent if text is percent-encoded from URL/Sheet
-        try { val = decodeURIComponent(val); } catch (e) { }
         
         bodyParams.push({
             type: "text",
@@ -976,7 +981,7 @@ function _showResult(ui, counter) {
 
 function formatPhoneNumber(phone) {
     if (!phone) return null;
-    let d = phone.toString().replace(/\\D/g, "");
+    let d = phone.toString().replace(/\D/g, "");
     if (d.startsWith("62")) return d;
     if (d.startsWith("0")) return "62" + d.slice(1);
     return "62" + d;
