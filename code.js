@@ -56,6 +56,12 @@ function openFormGlobal() {
     const verifyToken = props.getProperty("WA_VERIFY_TOKEN") || DEFAULTS.WA_VERIFY_TOKEN;
     const wabaId = props.getProperty("WA_WABA_ID") || DEFAULTS.WA_WABA_ID;
     const noNotif = props.getProperty("NO_HP_NOTIF") || DEFAULTS.NO_HP_NOTIF;
+    const extraSamplesRaw = props.getProperty("EXTRA_SAMPLES") || "[]";
+
+    let extraSamples = [];
+    try {
+        extraSamples = JSON.parse(extraSamplesRaw);
+    } catch (e) { }
 
     // Fetch display info dari Meta jika token/phoneId/wabaId sudah ada
     let displayName = "";
@@ -76,6 +82,14 @@ function openFormGlobal() {
         } catch (e) { }
     }
 
+    const sampleRows = extraSamples.map((s, i) => 
+        `<div style="display:flex;gap:8px;margin-bottom:6px;">
+          <input type="text" id="sampleName_${i}" value="${s.nama || ''}" placeholder="Nama" style="flex:1;">
+          <input type="text" id="sampleHp_${i}" value="${s.hp || ''}" placeholder="08xxx" style="flex:1;">
+          <button type="button" onclick="removeSample(${i})" style="padding:8px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Hapus</button>
+        </div>`
+    ).join('');
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -94,9 +108,12 @@ function openFormGlobal() {
     button:disabled { background: #ccc; cursor: not-allowed; }
     button.secondary { background: #6b7280; margin-top: 8px; }
     button.secondary:hover { background: #4b5563; }
+    button.add { background: #10b981; margin-top: 8px; width: auto; padding: 8px 16px; }
+    button.add:hover { background: #059669; }
     #status { text-align: center; margin-top: 10px; font-weight: bold; color: green; }
     .info-box { background: #e8f4f8; padding: 12px; border-radius: 4px; margin-bottom: 12px; border: 1px solid #bce8f1; }
     .info-box strong { display: block; margin-bottom: 4px; color: #006494; }
+    .sample-section { background: #f9fafb; padding: 12px; border-radius: 4px; border: 1px solid #e5e7eb; margin-top: 12px; }
   </style>
 </head>
 <body>
@@ -124,38 +141,56 @@ function openFormGlobal() {
       <label>Nomor HP Admin (Notifikasi):</label>
       <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
 
+      <div class="sample-section">
+        <label>Nomor Sample Tambahan (untuk Test Kirim):</label>
+        <div id="sampleContainer">${sampleRows}</div>
+        <button type="button" class="add" onclick="addSample()">+ Tambah Sample</button>
+      </div>
+
       <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
     </div>
   `}
   <div id="status"></div>
 
   <script>
-    function showEditForm() {
-      document.body.innerHTML = \`
-        <label>WhatsApp Access Token:</label>
-        <input type="text" id="token" value="${token}" placeholder="EAAB...">
+    var sampleCount = ${extraSamples.length};
 
-        <label>Phone Number ID:</label>
-        <input type="text" id="phoneId" value="${phoneId}" placeholder="1234567890">
-        
-        <label>WhatsApp Business Account ID (WABA ID):</label>
-        <input type="text" id="wabaId" value="${wabaId}" placeholder="Untuk API Load Template">
-
-        <label>Verify Token (Untuk Webhook):</label>
-        <input type="text" id="verifyToken" value="${verifyToken}" placeholder="my_secure_token">
-
-        <label>Nomor HP Admin (Notifikasi):</label>
-        <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
-
-        <button id="btn" onclick="simpan()">Simpan Pengaturan Global</button>
-        <div id="status"></div>
+    function addSample() {
+      var container = document.getElementById('sampleContainer');
+      var div = document.createElement('div');
+      div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;';
+      div.innerHTML = \`
+        <input type="text" id="sampleName_\${sampleCount}" placeholder="Nama" style="flex:1;">
+        <input type="text" id="sampleHp_\${sampleCount}" placeholder="08xxx" style="flex:1;">
+        <button type="button" onclick="removeSample(\${sampleCount})" style="padding:8px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Hapus</button>
       \`;
+      container.appendChild(div);
+      sampleCount++;
+    }
+
+    function removeSample(idx) {
+      var el = document.getElementById('sampleName_' + idx);
+      if (el && el.parentElement) el.parentElement.remove();
+    }
+
+    function showEditForm() {
+      location.reload();
     }
 
     function simpan() {
       var btn = document.getElementById('btn');
       btn.disabled = true;
       btn.innerText = 'Menyimpan...';
+
+      var samples = [];
+      for (var i = 0; i < sampleCount; i++) {
+        var nameEl = document.getElementById('sampleName_' + i);
+        var hpEl = document.getElementById('sampleHp_' + i);
+        if (nameEl && hpEl && nameEl.value.trim() && hpEl.value.trim()) {
+          samples.push({ nama: nameEl.value.trim(), hp: hpEl.value.trim() });
+        }
+      }
+
       google.script.run
         .withSuccessHandler(function(msg) {
           document.getElementById('status').innerText = msg;
@@ -173,6 +208,7 @@ function openFormGlobal() {
           verifyToken : document.getElementById('verifyToken').value.trim(),
           wabaId : document.getElementById('wabaId').value.trim(),
           noNotif: document.getElementById('noNotif').value.trim(),
+          extraSamples: JSON.stringify(samples)
         });
     }
   </script>
@@ -180,7 +216,7 @@ function openFormGlobal() {
 </html>`;
 
     SpreadsheetApp.getUi().showModalDialog(
-        HtmlService.createHtmlOutput(html).setWidth(460).setHeight(380),
+        HtmlService.createHtmlOutput(html).setWidth(520).setHeight(600),
         "Pengaturan Global Meta API"
     );
 }
@@ -192,6 +228,12 @@ function simpanPengaturanGlobal(data) {
     props.setProperty("WA_VERIFY_TOKEN", data.verifyToken);
     props.setProperty("WA_WABA_ID", data.wabaId);
     props.setProperty("NO_HP_NOTIF", data.noNotif);
+    
+    // Simpan sample tambahan (JSON array)
+    if (data.extraSamples) {
+        props.setProperty("EXTRA_SAMPLES", data.extraSamples);
+    }
+    
     return "Pengaturan global berhasil disimpan!";
 }
 
