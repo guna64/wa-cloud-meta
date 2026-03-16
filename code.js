@@ -239,16 +239,16 @@ function openFormPerSheet() {
     '        (tmplOpts ? "<div style=\\"margin-top:10px;background:#e8f4f8;padding:8px;border:1px solid #bce8f1;border-radius:4px;\\">" +' +
     '            "<label style=\\"margin-top:0;\\">Pilih Template Meta:</label>" +' +
     '            "<select id=\\"tmplSelect_" + idx + "\\" onchange=\\"pilihTmpl(" + idx + ", this.value)\\">" +' +
-    '              "<option value=\\"\\">-- Ketik Manual di Bawah --</option>" + tmplOpts + "</select>" +' +
+    '              "<option value=\\"\\">-- Pilih Template Meta --</option>" + tmplOpts + "</select>" +' +
     '          "</div>" : "") +' +
     '        "<div class=\\"flex-row\\" style=\\"margin-top:10px;\\">" +' +
     '          "<div class=\\"flex-col\\">" +' +
     '            "<label>Nama Template Meta:</label>" +' +
-    '            "<input type=\\"text\\" id=\\"tplName_" + idx + "\\" placeholder=\\"promo_merdeka\\">" +' +
+    '            "<input type=\\"text\\" id=\\"tplName_" + idx + "\\" placeholder=\\"promo_merdeka\\" readonly style=\\"background:#f3f4f6;\\">" +' +
     '          "</div>" +' +
     '          "<div class=\\"flex-col\\">" +' +
     '            "<label>Kode Bahasa:</label>" +' +
-    '            "<input type=\\"text\\" id=\\"tplLang_" + idx + "\\" placeholder=\\"id / en_US\\">" +' +
+    '            "<input type=\\"text\\" id=\\"tplLang_" + idx + "\\" placeholder=\\"id / en_US\\" readonly style=\\"background:#f3f4f6;\\">" +' +
     '          "</div>" +' +
     '        "</div>" +' +
     '        "<label>Parameter Template (1 variabel per baris):</label>" +' +
@@ -300,6 +300,11 @@ function openFormPerSheet() {
     '  btn.innerText = "Menyimpan...";' +
     '  var valid = true;' +
     '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
+    '    var sel = document.getElementById("tmplSelect_" + idx);' +
+    '    if (sel && !sel.value) {' +
+    '      alert("Sheet \\\"" + G.daftarSheet[idx] + "\\\": wajib pilih Template Meta dulu!");' +
+    '      valid = false; break;' +
+    '    }' +
     '    var mn = parseInt(document.getElementById("delayMin_" + idx).value);' +
     '    var mx = parseInt(document.getElementById("delayMax_" + idx).value);' +
     '    if (isNaN(mn) || isNaN(mx) || mn < 1 || mx < 1 || mn > mx) {' +
@@ -311,13 +316,17 @@ function openFormPerSheet() {
     '  var result = {};' +
     '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
     '    var name = G.daftarSheet[idx];' +
+    '    var sel2 = document.getElementById("tmplSelect_" + idx);' +
+    '    var parts2 = (sel2 && sel2.value) ? sel2.value.split("|") : [];' +
+    '    var tName = parts2[0] || document.getElementById("tplName_" + idx).value.trim();' +
+    '    var tLang = parts2[1] || document.getElementById("tplLang_" + idx).value.trim();' +
     '    result[name] = {' +
     '      aktif       : document.getElementById("aktif_"    + idx).checked,' +
     '      jam         : document.getElementById("jam_"      + idx).value,' +
     '      delayMin    : parseInt(document.getElementById("delayMin_" + idx).value),' +
     '      delayMax    : parseInt(document.getElementById("delayMax_" + idx).value),' +
-    '      templateName: document.getElementById("tplName_"  + idx).value.trim(),' +
-    '      templateLang: document.getElementById("tplLang_"  + idx).value.trim(),' +
+    '      templateName: tName,' +
+    '      templateLang: tLang,' +
     '      params      : document.getElementById("params_"   + idx).value,' +
     '      imageUrl    : document.getElementById("img_"      + idx).value.trim()' +
     '    };' +
