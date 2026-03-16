@@ -311,13 +311,6 @@ function openFormPerSheet() {
     '  btn.innerText = "Menyimpan...";' +
     '  var valid = true;' +
     '  for (var idx = 0; idx < G.daftarSheet.length; idx++) {' +
-    '    var isAktif = document.getElementById("aktif_" + idx).checked;' +
-    '    if (!isAktif) continue;' +
-    '    var sel = document.getElementById("tmplSelect_" + idx);' +
-    '    if (sel && !sel.value) {' +
-    '      alert("Sheet \\\"" + G.daftarSheet[idx] + "\\\": wajib pilih Template Meta dulu!");' +
-    '      valid = false; break;' +
-    '    }' +
     '    var mn = parseInt(document.getElementById("delayMin_" + idx).value);' +
     '    var mx = parseInt(document.getElementById("delayMax_" + idx).value);' +
     '    if (isNaN(mn) || isNaN(mx) || mn < 1 || mx < 1 || mn > mx) {' +
