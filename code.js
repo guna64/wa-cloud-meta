@@ -142,11 +142,29 @@ function openFormPerSheet() {
     let templateList = [];
     if (token && wabaId) {
         try {
-            const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?fields=name,language&limit=100";
+            const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?fields=name,language,components&limit=100";
             const res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
             if (res.getResponseCode() === 200) {
                 const json = JSON.parse(res.getContentText());
-                if (json.data) templateList = json.data.map(t => ({ name: t.name, lang: t.language }));
+                if (json.data) {
+                    templateList = json.data.map(t => {
+                        let bodyVarsCount = 0;
+                        let hasImage = false;
+                        if (t.components) {
+                            for (let c of t.components) {
+                                if (c.type === 'BODY' && c.text) {
+                                    // Hitung kemunculan {{xx}} di teks body
+                                    const match = c.text.match(/\\{\\{\\d+\\}\\}/g);
+                                    if (match) bodyVarsCount = match.length;
+                                }
+                                if (c.type === 'HEADER' && c.format === 'IMAGE') {
+                                    hasImage = true;
+                                }
+                            }
+                        }
+                        return { name: t.name, lang: t.language, vars: bodyVarsCount, img: hasImage };
+                    });
+                }
             }
         } catch (e) { }
     }
@@ -236,7 +254,10 @@ function openFormPerSheet() {
   var defaultDelMin = ${defaultDelMin};
   var defaultDelMax = ${defaultDelMax};
   var tList         = ${JSON.stringify(templateList)};
-  var tmplOpts      = tList.map(t => '<option value="' + t.name + '|' + t.lang + '">' + t.name + ' (' + t.lang + ')</option>').join('');
+  var tmplOpts      = tList.map(t => {
+      var valStr = t.name + '|' + t.lang + '|' + t.vars + '|' + (t.img ? '1' : '0');
+      return '<option value="' + valStr + '">' + t.name + ' (' + t.lang + ')</option>';
+  }).join('');
 
   var tabBar     = document.getElementById('tabBar');
   var tabContent = document.getElementById('tabContent');
@@ -322,8 +343,42 @@ function openFormPerSheet() {
   function pilihTmpl(idx, val) {
     if (!val) return;
     var parts = val.split('|');
-    document.getElementById('tplName_' + idx).value = parts[0];
-    document.getElementById('tplLang_' + idx).value = parts[1];
+    var name = parts[0];
+    var lang = parts[1];
+    var varsCount = parseInt(parts[2] || 0);
+    var hasImg = parts[3] === '1';
+
+    document.getElementById('tplName_' + idx).value = name;
+    document.getElementById('tplLang_' + idx).value = lang;
+
+    // Bersihkan parameter jika ada perubahan template
+    var paramArea = document.getElementById('params_' + idx);
+    var currentLines = paramArea.value.split('\\n').filter(l => l.trim() !== '');
+    
+    // Auto-generate placeholder
+    var newParams = [];
+    var defaultVars = ['[NAMA]', '[NAMA_SALES]', '[HP_SALES]'];
+    
+    for(var i = 0; i < varsCount; i++) {
+        // Coba pertahankan value lama jika jumlahnya masih sama/cukup
+        if(i < currentLines.length && currentLines[i]) {
+            newParams.push(currentLines[i]);
+        } else {
+            // Beri placeholder standard
+            newParams.push(defaultVars[i] || '[CUSTOM_VAR]');
+        }
+    }
+    paramArea.value = newParams.join('\\n');
+
+    // Jika template butuh gambar tapi belum ada isi, kasih placeholder text URL
+    var imgInput = document.getElementById('img_' + idx);
+    if(hasImg && imgInput.value.trim() === '') {
+        imgInput.value = 'https://...taruh-link-gambar-di-sini.jpg';
+        imgInput.style.border = '2px solid red'; // Highlight ke user
+    } else if (!hasImg) {
+        imgInput.value = '';
+        imgInput.style.border = '1px solid #ccc';
+    }
   }
 
   function simpanSemua() {
