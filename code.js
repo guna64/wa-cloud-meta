@@ -1010,6 +1010,12 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
         // Simpan ke Firebase jika berhasil - sekarang dengan isi pesan lengkap
         if (success) {
             _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, "sent");
+            
+            // Kirim notifikasi ke admin
+            const ss = SpreadsheetApp.getActiveSpreadsheet();
+            const activeSheet = ss.getActiveSheet();
+            const namaCabang = activeSheet.getName();
+            _notifikasiAdmin(phone, namaKonsumen, namaCabang, cfg.templateName, "sent");
         }
         
         Logger.log(response.getContentText());
@@ -1327,4 +1333,141 @@ function onOpen() {
         .addItem('▶️ Test Kirim (Sheet Ini)', 'testKirim')
         .addItem('🔧 Pengaturan Template', 'showConfigDialog')
         .addToUi();
+}
+
+// ============================================================
+//  MONITORING TELEGRAM - Kirim laporan ke admin
+// ============================================================
+
+const ADMIN_CHAT_ID = "727886431"; // ID Telegram admin
+
+/**
+ * Kirim notifikasi ke admin setiap kali pesan terkirim
+ */
+function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status) {
+    const props = PropertiesService.getDocumentProperties();
+    const token = props.getProperty("WA_TOKEN");
+    const phoneId = props.getProperty("WA_PHONE_ID");
+    
+    if (!token || !phoneId) return;
+    
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+    const emoji = status === "sent" ? "✅" : "❌";
+    
+    const pesan = emoji + " *LAPORAN PENGIRIMAN*\n\n" +
+                  "📍 *Cabang:* " + namaCabang + "\n" +
+                  "👤 *Konsumen:* " + (namaKonsumen || "-") + "\n" +
+                  "📱 *No HP:* " + phone + "\n" +
+                  "📝 *Template:* " + templateName + "\n" +
+                  "⏰ *Waktu:* " + timestamp + "\n" +
+                  "📊 *Status:* " + (status === "sent" ? "TERKIRIM" : "GAGAL");
+    
+    const url = "https://graph.facebook.com/v18.0/" + phoneId + "/messages";
+    
+    const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: ADMIN_CHAT_ID,
+        type: "text",
+        text: { 
+            preview_url: false, 
+            body: pesan 
+        }
+    };
+    
+    const options = {
+        method: "post",
+        contentType: "application/json",
+        headers: { Authorization: "Bearer " + token },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+    };
+    
+    try {
+        UrlFetchApp.fetch(url, options);
+    } catch (e) {
+        Logger.log("Gagal kirim notif admin: " + e);
+    }
+}
+
+/**
+ * Kirim ringkasan harian ke admin
+ */
+function kirimRingkasanHarian() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const allSheets = ss.getSheets();
+    const allConfig = getAllSheetConfig();
+    const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+    
+    let totalTerkirim = 0;
+    let totalCabangAktif = 0;
+    let detailCabang = [];
+    
+    for (const sheet of allSheets) {
+        const sheetName = sheet.getName();
+        if (SHEET_EXCLUDE.includes(sheetName)) continue;
+        
+        const lastRow = sheet.getLastRow();
+        if (lastRow < 2) continue;
+        
+        const statusValues = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
+        let terkirimCount = 0;
+        
+        for (const row of statusValues) {
+            if (row[0] && row[0].toString().trim() === "TERKIRIM") terkirimCount++;
+        }
+        
+        if (terkirimCount > 0) {
+            totalTerkirim += terkirimCount;
+            totalCabangAktif++;
+            
+            const cfg = allConfig[sheetName] || {};
+            detailCabang.push("• " + sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
+        }
+    }
+    
+    const props = PropertiesService.getDocumentProperties();
+    const token = props.getProperty("WA_TOKEN");
+    const phoneId = props.getProperty("WA_PHONE_ID");
+    
+    if (!token || !phoneId) return;
+    
+    let pesan = "📊 *RINGKASAN HARIAN*\n";
+    pesan += "📅 " + todayStr + "\n\n";
+    pesan += "📈 Total Terkirim: *" + totalTerkirim + "* pesan\n";
+    pesan += "🏢 Cabang Aktif: *" + totalCabangAktif + "*\n\n";
+    
+    if (detailCabang.length > 0) {
+        pesan += "📋 *Detail Cabang:*\n";
+        pesan += detailCabang.join("\n");
+    } else {
+        pesan += "⚠️ Belum ada pengiriman hari ini";
+    }
+    
+    const url = "https://graph.facebook.com/v18.0/" + phoneId + "/messages";
+    
+    const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: ADMIN_CHAT_ID,
+        type: "text",
+        text: { 
+            preview_url: false, 
+            body: pesan 
+        }
+    };
+    
+    const options = {
+        method: "post",
+        contentType: "application/json",
+        headers: { Authorization: "Bearer " + token },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+    };
+    
+    try {
+        UrlFetchApp.fetch(url, options);
+    } catch (e) {
+        Logger.log("Gagal kirim ringkasan: " + e);
+    }
 }
