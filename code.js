@@ -1202,3 +1202,117 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     }
 }
 
+
+// ============================================================
+//  MONITORING LAPORAN - Cek status pengiriman semua cabang
+// ============================================================
+
+function generateLaporanHarian() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const allSheets = ss.getSheets();
+    const allConfig = getAllSheetConfig();
+    const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+    
+    const laporan = [];
+    let totalKeseluruhan = 0;
+    
+    for (const sheet of allSheets) {
+        const sheetName = sheet.getName();
+        if (SHEET_EXCLUDE.includes(sheetName)) continue;
+        
+        const cfg = allConfig[sheetName] || {};
+        const templateName = cfg.templateName || "-";
+        const jamKirim = cfg.jam || DEFAULTS.JAM_TRIGGER;
+        
+        const lastRow = sheet.getLastRow();
+        if (lastRow < 2) {
+            laporan.push({
+                cabang: sheetName,
+                terkirim: 0,
+                totalData: 0,
+                template: templateName,
+                jam: jamKirim,
+                status: "⚠️ Kosong"
+            });
+            continue;
+        }
+        
+        const statusRange = sheet.getRange(2, 5, lastRow - 1, 1);
+        const statusValues = statusRange.getValues();
+        
+        let terkirimCount = 0;
+        let totalData = statusValues.length;
+        
+        for (const row of statusValues) {
+            const status = row[0] ? row[0].toString().trim() : "";
+            if (status === "TERKIRIM") terkirimCount++;
+        }
+        
+        totalKeseluruhan += terkirimCount;
+        
+        let statusIcon = "✅ Normal";
+        if (terkirimCount === 0 && totalData > 0) statusIcon = "⏳ Belum Kirim";
+        else if (terkirimCount === 0 && totalData === 0) statusIcon = "⚠️ Kosong";
+        
+        laporan.push({
+            cabang: sheetName,
+            terkirim: terkirimCount,
+            totalData: totalData,
+            template: templateName,
+            jam: jamKirim,
+            status: statusIcon
+        });
+    }
+    
+    laporan.sort((a, b) => b.terkirim - a.terkirim);
+    
+    let output = "📊 LAPORAN PENGIRIMAN - " + todayStr + "\n";
+    output += "=".repeat(65) + "\n\n";
+    
+    for (const item of laporan) {
+        output += item.cabang.substring(0, 20).padEnd(20) + " | ";
+        output += String(item.terkirim).padStart(3) + " | ";
+        output += item.template.substring(0, 15).padEnd(15) + " | ";
+        output += item.status + "\n";
+    }
+    
+    output += "\n" + "=".repeat(65) + "\n";
+    output += "TOTAL: " + totalKeseluruhan + " pesan terkirim\n";
+    
+    SpreadsheetApp.getUi().alert("📊 Laporan Harian", output, SpreadsheetApp.getUi().ButtonSet.OK);
+    
+    return output;
+}
+
+function cekStatusCabang() {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const sheetName = sheet.getName();
+    
+    if (SHEET_EXCLUDE.includes(sheetName)) {
+        SpreadsheetApp.getUi().alert("Sheet ini bukan data cabang!");
+        return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+        SpreadsheetApp.getUi().alert("Sheet masih kosong!");
+        return;
+    }
+    
+    const statusValues = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
+    let terkirim = 0;
+    
+    for (const row of statusValues) {
+        if (row[0] && row[0].toString().trim() === "TERKIRIM") terkirim++;
+    }
+    
+    const allConfig = getAllSheetConfig();
+    const cfg = allConfig[sheetName] || {};
+    
+    const output = "📊 " + sheetName + "\n\n" +
+                   "📤 Terkirim: " + terkirim + "/" + (lastRow - 1) + "\n" +
+                   "📝 Template: " + (cfg.templateName || "-") + "\n" +
+                   "⏰ Jam: " + (cfg.jam || DEFAULTS.JAM_TRIGGER) + ":00";
+    
+    SpreadsheetApp.getUi().alert(output);
+}
