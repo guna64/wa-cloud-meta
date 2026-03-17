@@ -1010,12 +1010,6 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
         // Simpan ke Firebase jika berhasil - sekarang dengan isi pesan lengkap
         if (success) {
             _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, "sent");
-            
-            // Kirim notifikasi ke admin
-            const ss = SpreadsheetApp.getActiveSpreadsheet();
-            const activeSheet = ss.getActiveSheet();
-            const namaCabang = activeSheet.getName();
-            _notifikasiAdmin(phone, namaKonsumen, namaCabang, cfg.templateName, "sent");
         }
         
         Logger.log(response.getContentText());
