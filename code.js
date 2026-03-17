@@ -1005,8 +1005,15 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
     
     try {
         const response = UrlFetchApp.fetch(url, options);
+        const success = response.getResponseCode() === 200 || response.getResponseCode() === 201;
+        
+        // Simpan ke Firebase jika berhasil
+        if (success) {
+            _saveMessageToFirebase(phone, cfg.templateName, cfg.templateName, "sent");
+        }
+        
         Logger.log(response.getContentText());
-        return response.getResponseCode() === 200 || response.getResponseCode() === 201;
+        return success;
     } catch (e) {
         Logger.log("Error API: " + e.toString());
         return false;
@@ -1104,6 +1111,70 @@ function doPost(e) {
     } catch (error) {
         Logger.log("Error in doPost: " + error.toString());
         return ContentService.createTextOutput("error").setStatusCode(500);
+    }
+}
+
+// ============================================================
+//  FIREBASE INTEGRATION - Simpan pesan ke dashboard
+// ============================================================
+function _saveMessageToFirebase(phone, message, templateName, status) {
+    const props = PropertiesService.getDocumentProperties();
+    const firebaseUrl = props.getProperty("FIREBASE_URL");
+    const firebaseSecret = props.getProperty("FIREBASE_SECRET");
+    
+    if (!firebaseUrl || !firebaseSecret) {
+        Logger.log("Firebase config tidak ditemukan di Properties");
+        return;
+    }
+    
+    // Format nomor untuk key Firebase
+    const phoneKey = "wa_" + phone.replace(/\D/g, "");
+    const timestamp = new Date().getTime();
+    
+    // Data pesan yang dikirim
+    const messageData = {
+        text: "📢 " + templateName,
+        timestamp: timestamp,
+        type: "template",
+        templateName: templateName,
+        from: "bot",
+        status: status
+    };
+    
+    // Gunakan user ID default (bisa disesuaikan)
+    const userKey = "blast_system";
+    
+    // Simpan ke /conversations/{userKey}/{phoneKey}/messages/{timestamp}
+    const messagePath = "conversations/" + userKey + "/" + phoneKey + "/messages/" + timestamp;
+    const messageUrl = firebaseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret;
+    
+    try {
+        // Simpan pesan
+        UrlFetchApp.fetch(messageUrl, {
+            method: "put",
+            contentType: "application/json",
+            payload: JSON.stringify(messageData),
+            muteHttpExceptions: true
+        });
+        
+        // Update lastMessage di conversation
+        const convUrl = firebaseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret;
+        UrlFetchApp.fetch(convUrl, {
+            method: "patch",
+            contentType: "application/json",
+            payload: JSON.stringify({
+                lastMessage: "📢 " + templateName,
+                lastMessageTime: timestamp,
+                platform: "whatsapp",
+                phoneNumber: phone,
+                name: phone // Bisa diupdate dengan nama konsumen jika tersedia
+            }),
+            muteHttpExceptions: true
+        });
+        
+        Logger.log("Berhasil simpan ke Firebase: " + phone);
+    } catch (e) {
+        Logger.log("Gagal save ke Firebase: " + e);
     }
 }
 
