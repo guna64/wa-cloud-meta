@@ -656,7 +656,20 @@ function sendSemuaSheet() {
                 SpreadsheetApp.flush();
 
                 if (!samplingSudahDikirim) {
-                    DATA_SAMPLING.forEach(sample => {
+                    // Ambil extra samples dari properties
+                    let extraSamples = [];
+                    try {
+                        extraSamples = JSON.parse(props.getProperty("EXTRA_SAMPLES") || "[]");
+                    } catch (e) { }
+                    
+                    // Merge hardcode + manual samples
+                    const mergedSamples = [...DATA_SAMPLING, ...extraSamples.map(s => ({
+                        nama: s.nama || "Sample",
+                        hp: formatPhoneNumber(s.hp || "")
+                    }))].filter(s => s.hp);
+                    
+                    // Kirim ke semua sample (hardcode + manual)
+                    mergedSamples.forEach(sample => {
                         let sampleOk = _sendMetaTemplate(sample.hp, cfg, sample.nama, namaSales, hpSales, token, phoneId);
                         if (sampleOk) {
                             monthlyCount++;
