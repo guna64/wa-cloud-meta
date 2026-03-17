@@ -556,8 +556,8 @@ function sendSemuaSheet() {
         props.deleteProperty("RESUME_COUNTER");
     }
 
-    const lastSamplingDate = props.getProperty("LAST_SAMPLING_DATE");
-    let samplingSudahDikirim = (lastSamplingDate === todayStr);
+    // Tracking sampling PER SHEET (bukan global per hari)
+    // Format: LAST_SAMPLING_DATE_<sheetName> = "dd/MM/yyyy"
 
     const dataSheets = getDataSheets();
     const allConfig = getAllSheetConfig();
@@ -655,6 +655,11 @@ function sendSemuaSheet() {
                 sheet.getRange(2 + i, 5).setValue("TERKIRIM");
                 SpreadsheetApp.flush();
 
+                // Cek apakah sampling sudah dikirim untuk SHEET INI hari ini
+                const sheetSamplingKey = "LAST_SAMPLING_DATE_" + sheetName;
+                const lastSheetSamplingDate = props.getProperty(sheetSamplingKey);
+                const samplingSudahDikirim = (lastSheetSamplingDate === todayStr);
+
                 if (!samplingSudahDikirim) {
                     // Ambil extra samples dari properties
                     let extraSamples = [];
@@ -676,8 +681,8 @@ function sendSemuaSheet() {
                             props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
                         }
                     });
-                    props.setProperty("LAST_SAMPLING_DATE", todayStr);
-                    samplingSudahDikirim = true;
+                    // Simpan tanggal sampling PER SHEET
+                    props.setProperty(sheetSamplingKey, todayStr);
                 }
 
                 const delayMs = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
