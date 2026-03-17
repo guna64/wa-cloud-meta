@@ -1316,3 +1316,15 @@ function cekStatusCabang() {
     
     SpreadsheetApp.getUi().alert(output);
 }
+// Tambahkan di awal file Kode.js atau di bagian paling atas setelah konstanta
+
+function onOpen() {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('📊 MONITORING')
+        .addItem('📈 Laporan Semua Cabang', 'generateLaporanHarian')
+        .addItem('📋 Status Cabang Aktif', 'cekStatusCabang')
+        .addSeparator()
+        .addItem('▶️ Test Kirim (Sheet Ini)', 'testKirim')
+        .addItem('🔧 Pengaturan Template', 'showConfigDialog')
+        .addToUi();
+}
