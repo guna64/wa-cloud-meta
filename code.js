@@ -955,8 +955,10 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
     
     const components = [];
     
-    // 1. Header (Opsional Image)
-    if (cfg.imageUrl && cfg.imageUrl.trim() !== "") {
+    // 1. Header (Opsional Image) - HANYA jika template punya header
+    // Skip jika imageUrl kosong atau template tidak punya header component
+    // (untuk menghindari error: "Template does not contain title component")
+    if (cfg.imageUrl && cfg.imageUrl.trim() !== "" && cfg.imageUrl.trim() !== "https://...taruh-link-gambar.jpg") {
         components.push({
             type: "header",
             parameters: [
