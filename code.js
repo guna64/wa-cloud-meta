@@ -1007,9 +1007,9 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
         const response = UrlFetchApp.fetch(url, options);
         const success = response.getResponseCode() === 200 || response.getResponseCode() === 201;
         
-        // Simpan ke Firebase jika berhasil
+        // Simpan ke Firebase jika berhasil - sekarang dengan isi pesan lengkap
         if (success) {
-            _saveMessageToFirebase(phone, cfg.templateName, cfg.templateName, "sent");
+            _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, "sent");
         }
         
         Logger.log(response.getContentText());
@@ -1117,7 +1117,7 @@ function doPost(e) {
 // ============================================================
 //  FIREBASE INTEGRATION - Simpan pesan ke dashboard
 // ============================================================
-function _saveMessageToFirebase(phone, message, templateName, status) {
+function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     const props = PropertiesService.getDocumentProperties();
     const firebaseUrl = props.getProperty("FIREBASE_URL");
     const firebaseSecret = props.getProperty("FIREBASE_SECRET");
@@ -1131,17 +1131,41 @@ function _saveMessageToFirebase(phone, message, templateName, status) {
     const phoneKey = "wa_" + phone.replace(/\D/g, "");
     const timestamp = new Date().getTime();
     
-    // Data pesan yang dikirim
+    // Parse parameter untuk membuat preview pesan
+    const rawParams = cfg.params || "";
+    const paramLines = rawParams.split(/\r?\n|\\n/);
+    let messagePreview = "";
+    
+    // Buat preview dari parameter yang diisi
+    const filledParams = [];
+    for (const line of paramLines) {
+        if (!line.trim()) continue;
+        let val = line.trim()
+            .replace(/\[NAMA\]/g, namaKonsumen || "Pelanggan")
+            .replace(/\[NAMA_SALES\]/g, namaSales || "Sales")
+            .replace(/\[HP_SALES\]/g, "Sales");
+        filledParams.push(val);
+    }
+    
+    if (filledParams.length > 0) {
+        messagePreview = filledParams.join(" | ");
+    } else {
+        messagePreview = "Template: " + cfg.templateName;
+    }
+    
+    // Data pesan lengkap
     const messageData = {
-        text: "📢 " + templateName,
+        text: messagePreview.substring(0, 200), // Batasi 200 karakter
         timestamp: timestamp,
         type: "template",
-        templateName: templateName,
+        templateName: cfg.templateName,
+        templateLang: cfg.templateLang,
+        parameters: filledParams,
         from: "bot",
         status: status
     };
     
-    // Gunakan user ID default (bisa disesuaikan)
+    // Gunakan user ID default
     const userKey = "blast_system";
     
     // Simpan ke /conversations/{userKey}/{phoneKey}/messages/{timestamp}
@@ -1163,16 +1187,16 @@ function _saveMessageToFirebase(phone, message, templateName, status) {
             method: "patch",
             contentType: "application/json",
             payload: JSON.stringify({
-                lastMessage: "📢 " + templateName,
+                lastMessage: "📢 " + messagePreview.substring(0, 50) + (messagePreview.length > 50 ? "..." : ""),
                 lastMessageTime: timestamp,
                 platform: "whatsapp",
                 phoneNumber: phone,
-                name: phone // Bisa diupdate dengan nama konsumen jika tersedia
+                name: namaKonsumen || phone
             }),
             muteHttpExceptions: true
         });
         
-        Logger.log("Berhasil simpan ke Firebase: " + phone);
+        Logger.log("Berhasil simpan ke Firebase: " + phone + " - " + messagePreview.substring(0, 50));
     } catch (e) {
         Logger.log("Gagal save ke Firebase: " + e);
     }
