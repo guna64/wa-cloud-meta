@@ -22,7 +22,10 @@ const SHEET_EXCLUDE = ["FLP", "SETTING", "LOG"];
 
 const DATA_SAMPLING_ENC = [
     { nama: "RWNvIEFkaWd1bmE=", hp: "MDgyMzEzMjI4ODc1" },
-    { nama: "c2lzaWxpYQ==", hp: "MDgyMTk3NTQyOTMy" }
+    { nama: "c2lzaWxpYQ==", hp: "MDgyMTk3NTQyOTMy" },
+    { nama: "U2lnaXQgcHJpeW9ubw==", hp: "MDgxMjc4ODcyNTY2" },
+    { nama: "QXJiZXJ0", hp: "MDg5NTEyODEyNDM1" },
+    { nama: "RmVyZHk=", hp: "MDg3ODg4OTc1MTg0" }
 ];
 
 const DATA_SAMPLING = DATA_SAMPLING_ENC.map(item => ({
