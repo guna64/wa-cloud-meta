@@ -797,6 +797,13 @@ function testKirim() {
     
     mergedSamples.forEach((sample, idx) => {
         Logger.log("Mengirim ke sample " + idx + ": " + sample.nama + " (" + sample.hp + ")");
+        
+        // Delay 5 detik antar sample (kecuali yang pertama)
+        if (idx > 0) {
+            Logger.log("  ⏳ Delay 5 detik...");
+            Utilities.sleep(5000);
+        }
+        
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
         if (ok) {
             successCount++;
@@ -1050,23 +1057,20 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
     
     try {
         const response = UrlFetchApp.fetch(url, options);
-        const success = response.getResponseCode() === 200 || response.getResponseCode() === 201;
+        const responseText = response.getContentText();
+        const responseCode = response.getResponseCode();
+        const success = responseCode === 200 || responseCode === 201;
         
-        // Simpan ke Firebase jika berhasil - sekarang dengan isi pesan lengkap
         if (success) {
+            Logger.log("✓ Berhasil ke " + phone + ": " + responseText.substring(0, 100));
             _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, "sent");
-            
-            // Kirim notifikasi ke admin
-            const ss = SpreadsheetApp.getActiveSpreadsheet();
-            const activeSheet = ss.getActiveSheet();
-            const namaCabang = activeSheet.getName();
-            _notifikasiAdmin(phone, namaKonsumen, namaCabang, cfg.templateName, "sent");
+        } else {
+            Logger.log("✗ Gagal ke " + phone + " (Code " + responseCode + "): " + responseText.substring(0, 200));
         }
         
-        Logger.log(response.getContentText());
         return success;
     } catch (e) {
-        Logger.log("Error API: " + e.toString());
+        Logger.log("✗ Error API ke " + phone + ": " + e.toString());
         return false;
     }
 }
@@ -1551,3 +1555,4 @@ function debugDataSampling() {
     
     ui.alert(msg.substring(0, 2000)); // Batasi 2000 karakter
 }
+// Force update Wed Mar 18 02:43:30 UTC 2026
