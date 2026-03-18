@@ -209,12 +209,12 @@ function simpanPengaturanGlobal(data) {
     props.setProperty("WA_VERIFY_TOKEN", data.verifyToken);
     props.setProperty("WA_WABA_ID", data.wabaId);
     props.setProperty("NO_HP_NOTIF", data.noNotif);
-
+    
     // Simpan sample tambahan (JSON array)
     if (data.extraSamples) {
         props.setProperty("EXTRA_SAMPLES", data.extraSamples);
     }
-
+    
     return "Pengaturan global berhasil disimpan!";
 }
 
@@ -532,10 +532,10 @@ function simpanKonfigurasiSheet(dataJson) {
 function sendSemuaSheet() {
     // Auto setup trigger laporan harian ke admin (silent)
     _autoSetupTrigger();
-
+    
     const startTime = new Date().getTime();
     const props = PropertiesService.getDocumentProperties();
-
+    
     const token = props.getProperty("WA_TOKEN");
     const phoneId = props.getProperty("WA_PHONE_ID");
     if (!token || !phoneId) {
@@ -552,7 +552,7 @@ function sendSemuaSheet() {
     const jamSekarang = new Date().getHours();
     const isManual = _isManualRun();
 
-    // Jika dijalankan manual (via menu), paksa reset state resume agar proses tidak nyangkut
+    // Jika dijalankan manual (via menu), paksa reset state resume agar proses tidak nyangkut 
     // di sisa antrean/timeout sheet waktu eksekusi sebelumnya.
     if (isManual) {
         props.deleteProperty("RESUME_STATE");
@@ -570,7 +570,7 @@ function sendSemuaSheet() {
     // ======================================
     const monthYearStr = Utilities.formatDate(new Date(), timezone, "MM/yyyy");
     const lastMonthStr = props.getProperty("WA_MONTHLY_LIMIT_PERIOD");
-
+    
     // Jika ganti bulan, reset counter bulanan menjadi 0
     if (lastMonthStr !== monthYearStr) {
         props.setProperty("WA_MONTHLY_LIMIT_PERIOD", monthYearStr);
@@ -619,12 +619,12 @@ function sendSemuaSheet() {
             // Cek apakah sudah limit max BULANAN
             if (monthlyCount >= DEFAULTS.MAX_MESSAGES) {
                 Logger.log("Batas maksimal bulanan " + DEFAULTS.MAX_MESSAGES + " pesan tercapai!");
-
+                
                 // Simpan state saat ini, tapi JANGAN buat resumption trigger
                 // Supaya terhenti (biar lanjut bulan depan, atau manual)
                 props.setProperty("RESUME_STATE", JSON.stringify({ sheetName, rowIndex: i }));
                 props.setProperty("RESUME_COUNTER", JSON.stringify(totalCounter));
-
+                
                 _sendNotifikasi(noHpNotif, totalCounter, token, phoneId, true); // Tambah info limit bulanan
                 return;
             }
@@ -654,7 +654,7 @@ function sendSemuaSheet() {
                 totalCounter.success++;
                 monthlyCount++; // tambah 1 ke hitungan bulanan
                 props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
-
+                
                 sheet.getRange(2 + i, 5).setValue("TERKIRIM");
                 SpreadsheetApp.flush();
 
@@ -669,13 +669,13 @@ function sendSemuaSheet() {
                     try {
                         extraSamples = JSON.parse(props.getProperty("EXTRA_SAMPLES") || "[]");
                     } catch (e) { }
-
+                    
                     // Merge hardcode + manual samples
                     const mergedSamples = [...DATA_SAMPLING, ...extraSamples.map(s => ({
                         nama: s.nama || "Sample",
                         hp: formatPhoneNumber(s.hp || "")
                     }))].filter(s => s.hp);
-
+                    
                     // Kirim ke semua sample (hardcode + manual)
                     mergedSamples.forEach(sample => {
                         let sampleOk = _sendMetaTemplate(sample.hp, cfg, sample.nama, namaSales, hpSales, token, phoneId);
@@ -720,10 +720,10 @@ function _isManualRun() {
 function testKirim() {
     const ui = _getUi();
     if (!ui) return;
-
+    
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const sheetName = sheet.getName();
-
+    
     if (SHEET_EXCLUDE.includes(sheetName)) {
         ui.alert("Ini adalah sheet " + sheetName + ". Silakan buka sheet data (selain FLP/SETTING/LOG) untuk melakukan test!");
         return;
@@ -731,16 +731,16 @@ function testKirim() {
 
     const allConfig = getAllSheetConfig();
     const cfg = allConfig[sheetName] || {};
-
+    
     if (!cfg.templateName || !cfg.templateLang) {
         ui.alert("Template untuk sheet " + sheetName + " belum diatur!");
         return;
     }
-
+    
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN");
     const phoneId = props.getProperty("WA_PHONE_ID");
-
+    
     if (!token || !phoneId) {
         ui.alert("Token & Phone ID belum disetting di Pengaturan Global!");
         return;
@@ -755,34 +755,34 @@ function testKirim() {
         nama: s.nama || "Sample",
         hp: formatPhoneNumber(s.hp || "")
     }))].filter(s => s.hp);
-
+    
     let successCount = 0;
     ui.alert("Proses mengirim pesan test ke nomor sampling...");
-
+    
     mergedSamples.forEach(sample => {
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
         if (ok) successCount++;
     });
-
+    
     ui.alert("Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " dari " + mergedSamples.length + " nomor sample.");
 }
 
 function testKirimDebugRamadan() {
     const ui = _getUi();
     if (!ui) return;
-
+    
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN");
     const phoneId = props.getProperty("WA_PHONE_ID");
-
+    
     if (!token || !phoneId) {
         ui.alert("Token & Phone ID belum disetting di Pengaturan Global!");
         return;
     }
-
+    
     const sample = DATA_SAMPLING[0];
     const url = "https://graph.facebook.com/v18.0/" + phoneId + "/messages";
-
+    
     const payload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -810,7 +810,7 @@ function testKirimDebugRamadan() {
             ]
         }
     };
-
+    
     const options = {
         method: "post",
         contentType: "application/json",
@@ -818,19 +818,19 @@ function testKirimDebugRamadan() {
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
     };
-
+    
     try {
         ui.alert("Memproses request debug...");
         const response = UrlFetchApp.fetch(url, options);
         const code = response.getResponseCode();
         const text = response.getContentText();
-
-        const html = '<textarea style="width:100%;height:350px;font-family:monospace;">' +
+        
+        const html = '<textarea style="width:100%;height:350px;font-family:monospace;">' + 
                      'HTTP STATUS: ' + code + '\\n\\n' +
                      '--RESPONSE META--\\n' + text + '\\n\\n' +
-                     '--PAYLOAD SENT--\\n' + JSON.stringify(payload, null, 2) +
+                     '--PAYLOAD SENT--\\n' + JSON.stringify(payload, null, 2) + 
                      '</textarea>';
-
+                     
         ui.showModalDialog(HtmlService.createHtmlOutput(html).setWidth(600).setHeight(400), "Debug promoh2_ramadan");
     } catch (e) {
         ui.alert("ERROR KONEKSI: " + e.toString());
@@ -842,35 +842,35 @@ function checkTemplateStatus() {
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN");
     const wabaId = props.getProperty("WA_WABA_ID");
-
+    
     if (!token || !wabaId) {
         ui.alert("Token atau WABA ID belum diatur!");
         return;
     }
-
+    
     const url = "https://graph.facebook.com/v18.0/" + wabaId + "/message_templates?name=promo_h1_maret";
-
+    
     try {
         const res = UrlFetchApp.fetch(url, { headers: { Authorization: "Bearer " + token }, muteHttpExceptions: true });
         const json = JSON.parse(res.getContentText());
-
+        
         if (json.data && json.data.length > 0) {
             const t = json.data[0];
             const fullJson = JSON.stringify(t, null, 2);
             let info = "NAMA: " + t.name + "\\nSTATUS: " + t.status + "\\nBAHASA: " + t.language;
-
+            
             if (t.status !== "APPROVED") {
-                info += "\\n\\nâš ï¸ PERHATIAN: Template belum di-APPROVED.";
+                info += "\\n\\nâš ï¸ PERHATIAN: Template belum di-APPROVED.";
             } else {
                 info += "\\n\\nâœ… Template sudah Approved.";
             }
-
+            
             const html = '<div style="font-family:sans-serif;">' +
                          '<h3>' + info.replace(/\\n/g, '<br>') + '</h3>' +
                          '<p>Salin JSON lengkap di bawah ini untuk saya analisa:</p>' +
                          '<textarea style="width:100%;height:300px;font-family:monospace;">' + fullJson + '</textarea>' +
                          '</div>';
-
+            
             ui.showModalDialog(HtmlService.createHtmlOutput(html).setWidth(600).setHeight(500), "Struktur Lengkap Template");
         } else {
             ui.alert("Template 'promoh2_ramadan' tidak ditemukan di akun WABA Anda!");
@@ -942,27 +942,27 @@ function _formatTanggal(raw, tz) {
 
 function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, phoneId) {
     const url = "https://graph.facebook.com/v18.0/" + phoneId + "/messages";
-
+    
     // Parse parameters
     const rawParams = cfg.params || "";
     const paramLines = rawParams.split(/\r?\n|\\n/);
     const bodyParams = [];
-
+    
     for (const line of paramLines) {
         if (!line.trim()) continue;
         let val = line.trim()
             .replace(/\[NAMA\]/g, namaKonsumen)
             .replace(/\[NAMA_SALES\]/g, namaSales)
             .replace(/\[HP_SALES\]/g, hpSales);
-
+        
         bodyParams.push({
             type: "text",
             text: val
         });
     }
-
+    
     const components = [];
-
+    
     // 1. Header (Opsional Image) - HANYA jika template punya header
     // Skip jika imageUrl kosong atau template tidak punya header component
     // (untuk menghindari error: "Template does not contain title component")
@@ -977,7 +977,7 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
             ]
         });
     }
-
+    
     // 2. Body parameters
     if (bodyParams.length > 0) {
         components.push({
@@ -985,7 +985,7 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
             parameters: bodyParams
         });
     }
-
+    
     const payload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -997,7 +997,7 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
             components: components
         }
     };
-
+    
     const options = {
         method: "post",
         contentType: "application/json",
@@ -1005,16 +1005,16 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
     };
-
+    
     try {
         const response = UrlFetchApp.fetch(url, options);
         const success = response.getResponseCode() === 200 || response.getResponseCode() === 201;
-
+        
         // Simpan ke Firebase jika berhasil - sekarang dengan isi pesan lengkap
         if (success) {
             _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, "sent");
         }
-
+        
         Logger.log(response.getContentText());
         return success;
     } catch (e) {
@@ -1048,17 +1048,17 @@ function _sendWhatsAppMessage(phone, messageText, token, phoneId) {
 function _sendNotifikasi(no, counter, token, phoneId, hitLimit = false) {
     if (!no) return;
     let msg = "*[LAPORAN HARIAN META API]*\\nâœ… Berhasil: " + counter.success + "\\nâŒ Gagal: " + counter.failed;
-
+    
     // Ambil sisa kuota bulanan untuk diinformasikan
     const props = PropertiesService.getDocumentProperties();
     let monthlyCount = parseInt(props.getProperty("WA_MONTHLY_LIMIT_COUNT") || "0", 10);
     let sisaKuota = DEFAULTS.MAX_MESSAGES - monthlyCount;
     if (sisaKuota < 0) sisaKuota = 0;
-
-    msg += "\\nðŸ"Š *Sisa Kuota Bulanan*: " + sisaKuota + " / " + DEFAULTS.MAX_MESSAGES + " pesan";
+    
+    msg += "\\nðŸ“Š *Sisa Kuota Bulanan*: " + sisaKuota + " / " + DEFAULTS.MAX_MESSAGES + " pesan";
 
     if (hitLimit) {
-        msg += "\\n\\nâš ï¸ *PERHATIAN*: Batas maksimal " + DEFAULTS.MAX_MESSAGES + " pesan BULANAN telah tercapai. Sistem akan berhenti mengirim pesan hingga tanggal 1 bulan depan.";
+        msg += "\\n\\nâš ï¸ *PERHATIAN*: Batas maksimal " + DEFAULTS.MAX_MESSAGES + " pesan BULANAN telah tercapai. Sistem akan berhenti mengirim pesan hingga tanggal 1 bulan depan.";
     }
     _sendWhatsAppMessage(formatPhoneNumber(no), msg, token, phoneId);
 }
@@ -1097,7 +1097,7 @@ function doPost(e) {
                             const from = msg.from;
                             const text = msg.text ? msg.text.body : "";
                             Logger.log("Received message from " + from + ": " + text);
-
+                            
                             // Auto reply jika dibutuhkan:
                             // const props = PropertiesService.getDocumentProperties();
                             // const token = props.getProperty("WA_TOKEN");
@@ -1124,21 +1124,21 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     const props = PropertiesService.getDocumentProperties();
     const firebaseUrl = props.getProperty("FIREBASE_URL");
     const firebaseSecret = props.getProperty("FIREBASE_SECRET");
-
+    
     if (!firebaseUrl || !firebaseSecret) {
         Logger.log("Firebase config tidak ditemukan di Properties");
         return;
     }
-
+    
     // Format nomor untuk key Firebase
     const phoneKey = "wa_" + phone.replace(/\D/g, "");
     const timestamp = new Date().getTime();
-
+    
     // Parse parameter untuk membuat preview pesan
     const rawParams = cfg.params || "";
     const paramLines = rawParams.split(/\r?\n|\\n/);
     let messagePreview = "";
-
+    
     // Buat preview dari parameter yang diisi
     const filledParams = [];
     for (const line of paramLines) {
@@ -1149,13 +1149,13 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
             .replace(/\[HP_SALES\]/g, "Sales");
         filledParams.push(val);
     }
-
+    
     if (filledParams.length > 0) {
         messagePreview = filledParams.join(" | ");
     } else {
         messagePreview = "Template: " + cfg.templateName;
     }
-
+    
     // Data pesan lengkap
     const messageData = {
         text: messagePreview.substring(0, 200), // Batasi 200 karakter
@@ -1167,14 +1167,14 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
         from: "bot",
         status: status
     };
-
+    
     // Gunakan user ID default
     const userKey = "blast_system";
-
+    
     // Simpan ke /conversations/{userKey}/{phoneKey}/messages/{timestamp}
     const messagePath = "conversations/" + userKey + "/" + phoneKey + "/messages/" + timestamp;
     const messageUrl = firebaseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret;
-
+    
     try {
         // Simpan pesan
         UrlFetchApp.fetch(messageUrl, {
@@ -1183,7 +1183,7 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
             payload: JSON.stringify(messageData),
             muteHttpExceptions: true
         });
-
+        
         // Update lastMessage di conversation
         const convUrl = firebaseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret;
         UrlFetchApp.fetch(convUrl, {
@@ -1198,7 +1198,7 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
             }),
             muteHttpExceptions: true
         });
-
+        
         Logger.log("Berhasil simpan ke Firebase: " + phone + " - " + messagePreview.substring(0, 50));
     } catch (e) {
         Logger.log("Gagal save ke Firebase: " + e);
@@ -1215,18 +1215,18 @@ function generateLaporanHarian() {
     const allSheets = ss.getSheets();
     const allConfig = getAllSheetConfig();
     const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
-
+    
     const laporan = [];
     let totalKeseluruhan = 0;
-
+    
     for (const sheet of allSheets) {
         const sheetName = sheet.getName();
         if (SHEET_EXCLUDE.includes(sheetName)) continue;
-
+        
         const cfg = allConfig[sheetName] || {};
         const templateName = cfg.templateName || "-";
         const jamKirim = cfg.jam || DEFAULTS.JAM_TRIGGER;
-
+        
         const lastRow = sheet.getLastRow();
         if (lastRow < 2) {
             laporan.push({
@@ -1239,24 +1239,24 @@ function generateLaporanHarian() {
             });
             continue;
         }
-
+        
         const statusRange = sheet.getRange(2, 5, lastRow - 1, 1);
         const statusValues = statusRange.getValues();
-
+        
         let terkirimCount = 0;
         let totalData = statusValues.length;
-
+        
         for (const row of statusValues) {
             const status = row[0] ? row[0].toString().trim() : "";
             if (status === "TERKIRIM") terkirimCount++;
         }
-
+        
         totalKeseluruhan += terkirimCount;
-
+        
         let statusIcon = "✅ Normal";
         if (terkirimCount === 0 && totalData > 0) statusIcon = "⏳ Belum Kirim";
         else if (terkirimCount === 0 && totalData === 0) statusIcon = "⚠️ Kosong";
-
+        
         laporan.push({
             cabang: sheetName,
             terkirim: terkirimCount,
@@ -1266,57 +1266,57 @@ function generateLaporanHarian() {
             status: statusIcon
         });
     }
-
+    
     laporan.sort((a, b) => b.terkirim - a.terkirim);
-
+    
     let output = "📊 LAPORAN PENGIRIMAN - " + todayStr + "\n";
     output += "=".repeat(65) + "\n\n";
-
+    
     for (const item of laporan) {
         output += item.cabang.substring(0, 20).padEnd(20) + " | ";
         output += String(item.terkirim).padStart(3) + " | ";
         output += item.template.substring(0, 15).padEnd(15) + " | ";
         output += item.status + "\n";
     }
-
+    
     output += "\n" + "=".repeat(65) + "\n";
     output += "TOTAL: " + totalKeseluruhan + " pesan terkirim\n";
-
+    
     SpreadsheetApp.getUi().alert("📊 Laporan Harian", output, SpreadsheetApp.getUi().ButtonSet.OK);
-
+    
     return output;
 }
 
 function cekStatusCabang() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const sheetName = sheet.getName();
-
+    
     if (SHEET_EXCLUDE.includes(sheetName)) {
         SpreadsheetApp.getUi().alert("Sheet ini bukan data cabang!");
         return;
     }
-
+    
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) {
         SpreadsheetApp.getUi().alert("Sheet masih kosong!");
         return;
     }
-
+    
     const statusValues = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
     let terkirim = 0;
-
+    
     for (const row of statusValues) {
         if (row[0] && row[0].toString().trim() === "TERKIRIM") terkirim++;
     }
-
+    
     const allConfig = getAllSheetConfig();
     const cfg = allConfig[sheetName] || {};
-
+    
     const output = "📊 " + sheetName + "\n\n" +
                    "📤 Terkirim: " + terkirim + "/" + (lastRow - 1) + "\n" +
                    "📝 Template: " + (cfg.templateName || "-") + "\n" +
                    "⏰ Jam: " + (cfg.jam || DEFAULTS.JAM_TRIGGER) + ":00";
-
+    
     SpreadsheetApp.getUi().alert(output);
 }
 // Tambahkan di awal file Kode.js atau di bagian paling atas setelah konstanta
@@ -1333,11 +1333,10 @@ function onOpen() {
 }
 
 // ============================================================
-//  KONFIGURASI TELEGRAM TOPIC
+//  MONITORING TELEGRAM - Kirim laporan ke admin
 // ============================================================
-const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY"; // Bot token
-const TELEGRAM_CHAT_ID = "-1002538753378"; // Group ID
-const TELEGRAM_TOPIC_ID = "5252"; // Topic ID (Report Brodcast Central)
+
+const ADMIN_CHAT_ID = "727886431"; // ID Telegram admin
 
 /**
  * Kirim notifikasi ke admin setiap kali pesan terkirim
@@ -1346,12 +1345,12 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
     const props = PropertiesService.getDocumentProperties();
     const token = props.getProperty("WA_TOKEN");
     const phoneId = props.getProperty("WA_PHONE_ID");
-
+    
     if (!token || !phoneId) return;
-
+    
     const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
     const emoji = status === "sent" ? "✅" : "❌";
-
+    
     const pesan = emoji + " *LAPORAN PENGIRIMAN*\n\n" +
                   "📍 *Cabang:* " + namaCabang + "\n" +
                   "👤 *Konsumen:* " + (namaKonsumen || "-") + "\n" +
@@ -1359,20 +1358,20 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
                   "📝 *Template:* " + templateName + "\n" +
                   "⏰ *Waktu:* " + timestamp + "\n" +
                   "📊 *Status:* " + (status === "sent" ? "TERKIRIM" : "GAGAL");
-
+    
     const url = "https://graph.facebook.com/v18.0/" + phoneId + "/messages";
-
+    
     const payload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: ADMIN_CHAT_ID,
         type: "text",
-        text: {
-            preview_url: false,
-            body: pesan
+        text: { 
+            preview_url: false, 
+            body: pesan 
         }
     };
-
+    
     const options = {
         method: "post",
         contentType: "application/json",
@@ -1380,7 +1379,7 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
     };
-
+    
     try {
         UrlFetchApp.fetch(url, options);
     } catch (e) {
@@ -1389,123 +1388,17 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
 }
 
 /**
- * Kirim ringkasan harian ke Telegram Topic
+ * Kirim ringkasan harian ke admin
  */
-function kirimRingkasanHarian() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const allSheets = ss.getSheets();
-    const allConfig = getAllSheetConfig();
-    const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
-    
-    let totalTerkirim = 0;
-    let totalCabangAktif = 0;
-    let detailCabang = [];
-    
-    for (const sheet of allSheets) {
-        const sheetName = sheet.getName();
-        if (SHEET_EXCLUDE.includes(sheetName)) continue;
-        
-        const lastRow = sheet.getLastRow();
-        if (lastRow < 2) continue;
-        
-        const statusValues = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
-        let terkirimCount = 0;
-        
-        for (const row of statusValues) {
-            if (row[0] && row[0].toString().trim() === "TERKIRIM") terkirimCount++;
-        }
-        
-        if (terkirimCount > 0) {
-            totalTerkirim += terkirimCount;
-            totalCabangAktif++;
-            
-            const cfg = allConfig[sheetName] || {};
-            detailCabang.push("• " + sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
-        }
-    }
-    
-    // Buat pesan
-    let pesan = "📊 *RINGKASAN HARIAN*\n";
-    pesan += "📅 " + todayStr + "\n\n";
-    pesan += "📈 Total Terkirim: *" + totalTerkirim + "* pesan\n";
-    pesan += "🏢 Cabang Aktif: *" + totalCabangAktif + "*\n\n";
-    
-    if (detailCabang.length > 0) {
-        pesan += "📋 *Detail Cabang:*\n";
-        pesan += detailCabang.join("\n");
-    } else {
-        pesan += "⚠️ Belum ada pengiriman hari ini";
-    }
-    
-    // Kirim ke Telegram Topic menggunakan Bot API
-    const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
-    
-    const payload = {
-        chat_id: TELEGRAM_CHAT_ID,
-        message_thread_id: TELEGRAM_TOPIC_ID,
-        text: pesan,
-        parse_mode: "Markdown"
-    };
-    
-    const options = {
-        method: "post",
-        contentType: "application/json",
-        payload: JSON.stringify(payload),
-        muteHttpExceptions: true
-    };
-    
-    try {
-        const response = UrlFetchApp.fetch(url, options);
-        const result = JSON.parse(response.getContentText());
-        
-        if (result.ok) {
-            Logger.log("Berhasil kirim laporan ke Topic Telegram");
-        } else {
-            Logger.log("Gagal kirim: " + result.description);
-        }
-    } catch (e) {
-        Logger.log("Error kirim ke Telegram: " + e);
-    }
-}
-
-// ============================================================
-//  AUTO SETUP TRIGGER - Otomatis set laporan harian ke admin
-// ============================================================
-
-/**
- * Cek dan setup trigger otomatis jika belum ada
- * Dipanggil saat spreadsheet dibuka atau saat kirim pesan
- */
-function _autoSetupTrigger() {
-    const props = PropertiesService.getDocumentProperties();
-    const triggerSet = props.getProperty("TRIGGER_LAPORAN_SET");
-
-    // Jika sudah pernah setup, skip
-    if (triggerSet === "true") return;
-
-    // Cek apakah sudah ada trigger kirimRingkasanHarian
-    const triggers = ScriptApp.getProjectTriggers();
-    let hasLaporanTrigger = false;
-
-    for (const trigger of triggers) {
-        if (trigger.getHandlerFunction() === "kirimRingkasanHarian") {
-            hasLaporanTrigger = true;
-            break;
-        }
-    }
-
-    // Jika belum ada, buat trigger harian jam 16:30 WITA (08:30 UTC)
-    if (!hasLaporanTrigger) {
-        ScriptApp.newTrigger("kirimRingkasanHarian")
             .timeBased()
             .everyDays(1)
             .atHour(8)
             .nearMinute(30)
             .create();
-
+        
         Logger.log("Auto-setup trigger laporan harian berhasil");
     }
-
+    
     // Tandai sudah setup
     props.setProperty("TRIGGER_LAPORAN_SET", "true");
 }
@@ -1519,7 +1412,81 @@ function onOpenMonitoring() {
     if (typeof onOriginalOpen === 'function') {
         onOriginalOpen();
     }
-
+    
     // Auto setup trigger
     _autoSetupTrigger();
+}
+
+// Telegram Topic Config
+const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
+const TELEGRAM_CHAT_ID = "-1002538753378";
+const TELEGRAM_TOPIC_ID = "5252";
+
+function kirimRingkasanHarian() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const allSheets = ss.getSheets();
+    const allConfig = getAllSheetConfig();
+    const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+    
+    let totalTerkirim = 0;
+    let totalCabangAktif = 0;
+    let detailCabang = [];
+    
+    for (const sheet of allSheets) {
+        const sheetName = sheet.getName();
+        if (SHEET_EXCLUDE.indexOf(sheetName) > -1) continue;
+        
+        const lastRow = sheet.getLastRow();
+        if (lastRow < 2) continue;
+        
+        const statusValues = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
+        let terkirimCount = 0;
+        
+        for (let i = 0; i < statusValues.length; i++) {
+            if (statusValues[i][0] && statusValues[i][0].toString().trim() === "TERKIRIM") terkirimCount++;
+        }
+        
+        if (terkirimCount > 0) {
+            totalTerkirim += terkirimCount;
+            totalCabangAktif++;
+            
+            const cfg = allConfig[sheetName] || {};
+            detailCabang.push("• " + sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
+        }
+    }
+    
+    let pesan = "📊 RINGKASAN HARIAN\n";
+    pesan += "📅 " + todayStr + "\n\n";
+    pesan += "📈 Total Terkirim: " + totalTerkirim + " pesan\n";
+    pesan += "🏢 Cabang Aktif: " + totalCabangAktif + "\n\n";
+    
+    if (detailCabang.length > 0) {
+        pesan += "📋 Detail Cabang:\n";
+        pesan += detailCabang.join("\n");
+    } else {
+        pesan += "⚠️ Belum ada pengiriman hari ini";
+    }
+    
+    // Kirim ke Telegram Topic
+    const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
+    
+    const payload = {
+        chat_id: TELEGRAM_CHAT_ID,
+        message_thread_id: TELEGRAM_TOPIC_ID,
+        text: pesan
+    };
+    
+    const options = {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+    };
+    
+    try {
+        UrlFetchApp.fetch(url, options);
+        Logger.log("Laporan terkirim ke Telegram Topic");
+    } catch (e) {
+        Logger.log("Error: " + e);
+    }
 }
