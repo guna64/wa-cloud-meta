@@ -1385,39 +1385,8 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
     } catch (e) {
         Logger.log("Gagal kirim notif admin: " + e);
     }
-}
 
-/**
- * Kirim ringkasan harian ke admin
- */
-            .timeBased()
-            .everyDays(1)
-            .atHour(8)
-            .nearMinute(30)
-            .create();
-        
-        Logger.log("Auto-setup trigger laporan harian berhasil");
-    }
-    
-    // Tandai sudah setup
-    props.setProperty("TRIGGER_LAPORAN_SET", "true");
-}
-
-/**
- * Fungsi ini dipanggil saat spreadsheet dibuka
- * Otomatis setup trigger tanpa user perlu lakukan apa-apa
- */
-function onOpenMonitoring() {
-    // Panggil fungsi onOpen original jika ada
-    if (typeof onOriginalOpen === 'function') {
-        onOriginalOpen();
-    }
-    
-    // Auto setup trigger
-    _autoSetupTrigger();
-}
-
-// Telegram Topic Config
+// Telegram Topic Config - Report Brodcast Central
 const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
 const TELEGRAM_CHAT_ID = "-1002538753378";
 const TELEGRAM_TOPIC_ID = "5252";
@@ -1451,31 +1420,28 @@ function kirimRingkasanHarian() {
             totalCabangAktif++;
             
             const cfg = allConfig[sheetName] || {};
-            detailCabang.push("• " + sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
+            detailCabang.push(sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
         }
     }
     
-    let pesan = "📊 RINGKASAN HARIAN\n";
-    pesan += "📅 " + todayStr + "\n\n";
-    pesan += "📈 Total Terkirim: " + totalTerkirim + " pesan\n";
-    pesan += "🏢 Cabang Aktif: " + totalCabangAktif + "\n\n";
+    let pesan = "RINGKASAN HARIAN\n";
+    pesan += todayStr + "\n\n";
+    pesan += "Total Terkirim: " + totalTerkirim + " pesan\n";
+    pesan += "Cabang Aktif: " + totalCabangAktif + "\n\n";
     
     if (detailCabang.length > 0) {
-        pesan += "📋 Detail Cabang:\n";
+        pesan += "Detail Cabang:\n";
         pesan += detailCabang.join("\n");
     } else {
-        pesan += "⚠️ Belum ada pengiriman hari ini";
+        pesan += "Belum ada pengiriman hari ini";
     }
     
-    // Kirim ke Telegram Topic
     const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
-    
     const payload = {
         chat_id: TELEGRAM_CHAT_ID,
         message_thread_id: TELEGRAM_TOPIC_ID,
         text: pesan
     };
-    
     const options = {
         method: "post",
         contentType: "application/json",
