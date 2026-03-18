@@ -530,6 +530,9 @@ function simpanKonfigurasiSheet(dataJson) {
 
 // ------------------------------
 function sendSemuaSheet() {
+    // Auto setup trigger laporan harian ke admin (silent)
+    _autoSetupTrigger();
+    
     const startTime = new Date().getTime();
     const props = PropertiesService.getDocumentProperties();
     
@@ -1464,4 +1467,59 @@ function kirimRingkasanHarian() {
     } catch (e) {
         Logger.log("Gagal kirim ringkasan: " + e);
     }
+}
+
+// ============================================================
+//  AUTO SETUP TRIGGER - Otomatis set laporan harian ke admin
+// ============================================================
+
+/**
+ * Cek dan setup trigger otomatis jika belum ada
+ * Dipanggil saat spreadsheet dibuka atau saat kirim pesan
+ */
+function _autoSetupTrigger() {
+    const props = PropertiesService.getDocumentProperties();
+    const triggerSet = props.getProperty("TRIGGER_LAPORAN_SET");
+    
+    // Jika sudah pernah setup, skip
+    if (triggerSet === "true") return;
+    
+    // Cek apakah sudah ada trigger kirimRingkasanHarian
+    const triggers = ScriptApp.getProjectTriggers();
+    let hasLaporanTrigger = false;
+    
+    for (const trigger of triggers) {
+        if (trigger.getHandlerFunction() === "kirimRingkasanHarian") {
+            hasLaporanTrigger = true;
+            break;
+        }
+    }
+    
+    // Jika belum ada, buat trigger harian jam 8 pagi
+    if (!hasLaporanTrigger) {
+        ScriptApp.newTrigger("kirimRingkasanHarian")
+            .timeBased()
+            .everyDays(1)
+            .atHour(8)
+            .create();
+        
+        Logger.log("Auto-setup trigger laporan harian berhasil");
+    }
+    
+    // Tandai sudah setup
+    props.setProperty("TRIGGER_LAPORAN_SET", "true");
+}
+
+/**
+ * Fungsi ini dipanggil saat spreadsheet dibuka
+ * Otomatis setup trigger tanpa user perlu lakukan apa-apa
+ */
+function onOpenMonitoring() {
+    // Panggil fungsi onOpen original jika ada
+    if (typeof onOriginalOpen === 'function') {
+        onOriginalOpen();
+    }
+    
+    // Auto setup trigger
+    _autoSetupTrigger();
 }
