@@ -612,6 +612,61 @@ function sendSemuaSheet() {
             : 0;
         skipUntilResume = false;
 
+        // CEK: Apakah ada data untuk hari ini di sheet ini?
+        let adaDataHariIni = false;
+        let firstNamaSales = "";
+        
+        for (let checkIdx = startRow; checkIdx < rows.length; checkIdx++) {
+            const checkRow = rows[checkIdx];
+            const checkTanggal = _formatTanggal(checkRow[0], timezone);
+            const checkStatus = checkRow[4] ? checkRow[4].toString().trim() : "";
+            
+            if (checkTanggal === todayStr && checkRow[2] && checkStatus !== "TERKIRIM") {
+                adaDataHariIni = true;
+                firstNamaSales = checkRow[3] ? checkRow[3].toString().trim() : "";
+                break; // Cukup tahu ada data, tidak perlu cek semua
+            }
+        }
+        
+        // SAMPLING: Kirim sampling jika ada data hari ini dan belum pernah kirim hari ini
+        if (adaDataHariIni) {
+            const sheetSamplingKey = "LAST_SAMPLING_DATE_" + sheetName;
+            const lastSheetSamplingDate = props.getProperty(sheetSamplingKey);
+            const samplingSudahDikirim = (lastSheetSamplingDate === todayStr);
+            
+            if (!samplingSudahDikirim) {
+                const hpSales = mapSales[firstNamaSales] || "-";
+                
+                // Ambil extra samples dari properties
+                let extraSamples = [];
+                try {
+                    extraSamples = JSON.parse(props.getProperty("EXTRA_SAMPLES") || "[]");
+                } catch (e) { }
+                
+                // Merge hardcode + manual samples
+                const mergedSamples = [...DATA_SAMPLING, ...extraSamples.map(s => ({
+                    nama: s.nama || "Sample",
+                    hp: formatPhoneNumber(s.hp || "")
+                }))].filter(s => s.hp);
+                
+                // Kirim ke semua sample (hardcode + manual)
+                mergedSamples.forEach(sample => {
+                    let sampleOk = _sendMetaTemplate(sample.hp, cfg, sample.nama, firstNamaSales, hpSales, token, phoneId);
+                    if (sampleOk) {
+                        monthlyCount++;
+                        props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
+                    }
+                });
+                
+                // Simpan tanggal sampling PER SHEET
+                props.setProperty(sheetSamplingKey, todayStr);
+                
+                // Delay setelah sampling
+                Utilities.sleep(3000);
+            }
+        }
+
+        // LOOP PENGIRIMAN PESAN UTAMA
         for (let i = startRow; i < rows.length; i++) {
             // Cek apakah sudah limit max BULANAN
             if (monthlyCount >= DEFAULTS.MAX_MESSAGES) {
@@ -654,36 +709,6 @@ function sendSemuaSheet() {
                 
                 sheet.getRange(2 + i, 5).setValue("TERKIRIM");
                 SpreadsheetApp.flush();
-
-                // Cek apakah sampling sudah dikirim untuk SHEET INI hari ini
-                const sheetSamplingKey = "LAST_SAMPLING_DATE_" + sheetName;
-                const lastSheetSamplingDate = props.getProperty(sheetSamplingKey);
-                const samplingSudahDikirim = (lastSheetSamplingDate === todayStr);
-
-                if (!samplingSudahDikirim) {
-                    // Ambil extra samples dari properties
-                    let extraSamples = [];
-                    try {
-                        extraSamples = JSON.parse(props.getProperty("EXTRA_SAMPLES") || "[]");
-                    } catch (e) { }
-                    
-                    // Merge hardcode + manual samples
-                    const mergedSamples = [...DATA_SAMPLING, ...extraSamples.map(s => ({
-                        nama: s.nama || "Sample",
-                        hp: formatPhoneNumber(s.hp || "")
-                    }))].filter(s => s.hp);
-                    
-                    // Kirim ke semua sample (hardcode + manual)
-                    mergedSamples.forEach(sample => {
-                        let sampleOk = _sendMetaTemplate(sample.hp, cfg, sample.nama, namaSales, hpSales, token, phoneId);
-                        if (sampleOk) {
-                            monthlyCount++;
-                            props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
-                        }
-                    });
-                    // Simpan tanggal sampling PER SHEET
-                    props.setProperty(sheetSamplingKey, todayStr);
-                }
 
                 const delayMs = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
                 Utilities.sleep(delayMs);
