@@ -1515,3 +1515,39 @@ function kirimRingkasanHarian() {
 const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
 const TELEGRAM_CHAT_ID = "-1002538753378";
 const TELEGRAM_TOPIC_ID = "5252";
+
+
+// ============================================================
+//  DEBUG SAMPLING - Tampilkan semua data sampling
+// ============================================================
+function debugDataSampling() {
+    const ui = SpreadsheetApp.getUi();
+    
+    let msg = "=== DATA SAMPLING DEBUG ===\n\n";
+    msg += "Raw DATA_SAMPLING_ENC (" + DATA_SAMPLING_ENC.length + " items):\n";
+    DATA_SAMPLING_ENC.forEach((s, i) => {
+        msg += i + ". " + s.nama + " | " + s.hp + "\n";
+    });
+    
+    msg += "\n\nDecoded DATA_SAMPLING (" + DATA_SAMPLING.length + " items):\n";
+    DATA_SAMPLING.forEach((s, i) => {
+        const formatted = formatPhoneNumber(s.hp);
+        msg += i + ". " + s.nama + " | Raw: " + s.hp + " | Formatted: " + formatted + "\n";
+    });
+    
+    // Extra samples
+    const props = PropertiesService.getDocumentProperties();
+    const extraRaw = props.getProperty("EXTRA_SAMPLES") || "[]";
+    let extraSamples = [];
+    try {
+        extraSamples = JSON.parse(extraRaw);
+    } catch (e) {}
+    
+    msg += "\n\nEXTRA_SAMPLES (" + extraSamples.length + " items):\n";
+    extraSamples.forEach((s, i) => {
+        const formatted = formatPhoneNumber(s.hp || "");
+        msg += i + ". " + (s.nama || "Sample") + " | Raw: " + s.hp + " | Formatted: " + formatted + "\n";
+    });
+    
+    ui.alert(msg.substring(0, 2000)); // Batasi 2000 karakter
+}
