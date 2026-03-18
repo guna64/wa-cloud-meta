@@ -1382,9 +1382,6 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
     } catch (e) {
         Logger.log("Gagal kirim notif admin: " + e);
     }
-}
-
-/**
 // Telegram Topic Config - Report Brodcast Central
 const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
 const TELEGRAM_CHAT_ID = "-1002538753378";
