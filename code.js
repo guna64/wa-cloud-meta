@@ -1010,6 +1010,12 @@ function _sendMetaTemplate(phone, cfg, namaKonsumen, namaSales, hpSales, token, 
         // Simpan ke Firebase jika berhasil - sekarang dengan isi pesan lengkap
         if (success) {
             _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, "sent");
+            
+            // Kirim notifikasi ke admin
+            const ss = SpreadsheetApp.getActiveSpreadsheet();
+            const activeSheet = ss.getActiveSheet();
+            const namaCabang = activeSheet.getName();
+            _notifikasiAdmin(phone, namaKonsumen, namaCabang, cfg.templateName, "sent");
         }
         
         Logger.log(response.getContentText());
@@ -1382,11 +1388,11 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
     } catch (e) {
         Logger.log("Gagal kirim notif admin: " + e);
     }
-// Telegram Topic Config - Report Brodcast Central
-const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
-const TELEGRAM_CHAT_ID = "-1002538753378";
-const TELEGRAM_TOPIC_ID = "5252";
+}
 
+/**
+ * Kirim ringkasan harian ke admin
+ */
 function kirimRingkasanHarian() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const allSheets = ss.getSheets();
@@ -1399,7 +1405,7 @@ function kirimRingkasanHarian() {
     
     for (const sheet of allSheets) {
         const sheetName = sheet.getName();
-        if (SHEET_EXCLUDE.indexOf(sheetName) > -1) continue;
+        if (SHEET_EXCLUDE.includes(sheetName)) continue;
         
         const lastRow = sheet.getLastRow();
         if (lastRow < 2) continue;
@@ -1407,31 +1413,38 @@ function kirimRingkasanHarian() {
         const statusValues = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
         let terkirimCount = 0;
         
-        for (let i = 0; i < statusValues.length; i++) {
-            if (statusValues[i][0] && statusValues[i][0].toString().trim() === "TERKIRIM") {
-                terkirimCount++;
-            }
+        for (const row of statusValues) {
+            if (row[0] && row[0].toString().trim() === "TERKIRIM") terkirimCount++;
         }
         
         if (terkirimCount > 0) {
             totalTerkirim += terkirimCount;
             totalCabangAktif++;
+            
             const cfg = allConfig[sheetName] || {};
-            detailCabang.push(sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
+            detailCabang.push("• " + sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
         }
     }
     
-    let pesan = "📊 RINGKASAN HARIAN\n";
+    const props = PropertiesService.getDocumentProperties();
+    const token = props.getProperty("WA_TOKEN");
+    const phoneId = props.getProperty("WA_PHONE_ID");
+    
+    if (!token || !phoneId) return;
+    
+    let pesan = "📊 *RINGKASAN HARIAN*\n";
     pesan += "📅 " + todayStr + "\n\n";
-    pesan += "📈 Total Terkirim: " + totalTerkirim + " pesan\n";
-    pesan += "🏢 Cabang Aktif: " + totalCabangAktif + "\n\n";
+    pesan += "📈 Total Terkirim: *" + totalTerkirim + "* pesan\n";
+    pesan += "🏢 Cabang Aktif: *" + totalCabangAktif + "*\n\n";
     
     if (detailCabang.length > 0) {
-        pesan += "📋 Detail Cabang:\n" + detailCabang.join("\n");
+        pesan += "📋 *Detail Cabang:*\n";
+        pesan += detailCabang.join("\n");
     } else {
         pesan += "⚠️ Belum ada pengiriman hari ini";
     }
     
+    // Kirim ke Telegram Topic
     const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
     const payload = {
         chat_id: TELEGRAM_CHAT_ID,
@@ -1452,3 +1465,8 @@ function kirimRingkasanHarian() {
         Logger.log("Error: " + e);
     }
 }
+
+// Telegram Topic Config - Report Brodcast Central
+const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
+const TELEGRAM_CHAT_ID = "-1002538753378";
+const TELEGRAM_TOPIC_ID = "5252";
