@@ -37,9 +37,14 @@ const DATA_SAMPLING = DATA_SAMPLING_ENC.map(item => ({
 function onOpen() {
     SpreadsheetApp.getUi()
         .createMenu("WA Cloud Meta")
-        .addItem("Pengaturan Global", "openFormGlobal")
-        .addItem("Pengaturan Per Sheet", "openFormPerSheet")
-        .addItem("Test Kirim Template (Sheet Aktif)", "testKirim")
+        .addItem("⚙️ Pengaturan Global", "openFormGlobal")
+        .addItem("📋 Pengaturan Per Sheet", "openFormPerSheet")
+        .addItem("🚀 Test Kirim Template (Sheet Aktif)", "testKirim")
+        .addSeparator()
+        .addSubMenu(SpreadsheetApp.getUi().createMenu("📊 MONITORING")
+            .addItem("📈 Laporan Semua Cabang", "generateLaporanHarian")
+            .addItem("📋 Status Cabang Aktif", "cekStatusCabang")
+            .addItem("🔍 Debug Data Sampling", "debugDataSampling"))
         .addToUi();
 }
 
