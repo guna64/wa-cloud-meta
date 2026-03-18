@@ -740,6 +740,12 @@ function _isManualRun() {
 }
 
 function testKirim() {
+    // Log awal fungsi
+    Logger.log("=== TEST KIRIM DIMULAI ===");
+    Logger.log("DATA_SAMPLING_ENC length: " + DATA_SAMPLING_ENC.length);
+    Logger.log("DATA_SAMPLING length: " + DATA_SAMPLING.length);
+    DATA_SAMPLING.forEach((s, i) => Logger.log("  Sample " + i + ": " + s.nama + " - " + s.hp));
+    
     const ui = _getUi();
     if (!ui) return;
     
