@@ -773,20 +773,28 @@ function testKirim() {
         extraSamples = JSON.parse(props.getProperty("EXTRA_SAMPLES") || "[]");
     } catch (e) { }
 
+    // Debug: log semua samples sebelum filter
+    Logger.log("DATA_SAMPLING count: " + DATA_SAMPLING.length);
+    Logger.log("EXTRA_SAMPLES count: " + extraSamples.length);
+    
     const mergedSamples = [...DATA_SAMPLING, ...extraSamples.map(s => ({
         nama: s.nama || "Sample",
         hp: formatPhoneNumber(s.hp || "")
     }))].filter(s => s.hp);
     
+    // Debug: log setelah filter
+    Logger.log("Merged samples after filter: " + mergedSamples.length);
+    mergedSamples.forEach((s, i) => Logger.log("Sample " + i + ": " + s.nama + " - " + s.hp));
+    
     let successCount = 0;
-    ui.alert("Proses mengirim pesan test ke nomor sampling...");
+    ui.alert("Proses mengirim pesan test ke " + mergedSamples.length + " nomor sampling...");
     
     mergedSamples.forEach(sample => {
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
         if (ok) successCount++;
     });
     
-    ui.alert("Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " dari " + mergedSamples.length + " nomor sample.");
+    ui.alert("Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " dari " + mergedSamples.length + " nomor sample.\\n\\nHardcode: " + DATA_SAMPLING.length + ", Extra: " + extraSamples.length);
 }
 
 function testKirimDebugRamadan() {
