@@ -789,9 +789,15 @@ function testKirim() {
     let successCount = 0;
     ui.alert("Proses mengirim pesan test ke " + mergedSamples.length + " nomor sampling...");
     
-    mergedSamples.forEach(sample => {
+    mergedSamples.forEach((sample, idx) => {
+        Logger.log("Mengirim ke sample " + idx + ": " + sample.nama + " (" + sample.hp + ")");
         let ok = _sendMetaTemplate(sample.hp, cfg, sample.nama, "NamaSalesTest", "08123456789", token, phoneId);
-        if (ok) successCount++;
+        if (ok) {
+            successCount++;
+            Logger.log("  ✓ Berhasil");
+        } else {
+            Logger.log("  ✗ Gagal kirim ke " + sample.nama);
+        }
     });
     
     ui.alert("Test Kirim Selesai!\\nBerhasil mengirim ke " + successCount + " dari " + mergedSamples.length + " nomor sample.\\n\\nHardcode: " + DATA_SAMPLING.length + ", Extra: " + extraSamples.length);
