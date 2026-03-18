@@ -1495,12 +1495,13 @@ function _autoSetupTrigger() {
         }
     }
     
-    // Jika belum ada, buat trigger harian jam 8 pagi
+    // Jika belum ada, buat trigger harian jam 16:30 WITA (08:30 UTC)
     if (!hasLaporanTrigger) {
         ScriptApp.newTrigger("kirimRingkasanHarian")
             .timeBased()
             .everyDays(1)
             .atHour(8)
+            .nearMinute(30)
             .create();
         
         Logger.log("Auto-setup trigger laporan harian berhasil");
