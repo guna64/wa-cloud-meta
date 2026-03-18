@@ -530,9 +530,6 @@ function simpanKonfigurasiSheet(dataJson) {
 
 // ------------------------------
 function sendSemuaSheet() {
-    // Auto setup trigger laporan harian ke admin (silent)
-    _autoSetupTrigger();
-    
     const startTime = new Date().getTime();
     const props = PropertiesService.getDocumentProperties();
     
@@ -1385,7 +1382,9 @@ function _notifikasiAdmin(phone, namaKonsumen, namaCabang, templateName, status)
     } catch (e) {
         Logger.log("Gagal kirim notif admin: " + e);
     }
+}
 
+/**
 // Telegram Topic Config - Report Brodcast Central
 const TELEGRAM_BOT_TOKEN = "8737690023:AAGz60NDz_-v6ASJabAqWrxy65aYT4XP1fY";
 const TELEGRAM_CHAT_ID = "-1002538753378";
@@ -1412,28 +1411,28 @@ function kirimRingkasanHarian() {
         let terkirimCount = 0;
         
         for (let i = 0; i < statusValues.length; i++) {
-            if (statusValues[i][0] && statusValues[i][0].toString().trim() === "TERKIRIM") terkirimCount++;
+            if (statusValues[i][0] && statusValues[i][0].toString().trim() === "TERKIRIM") {
+                terkirimCount++;
+            }
         }
         
         if (terkirimCount > 0) {
             totalTerkirim += terkirimCount;
             totalCabangAktif++;
-            
             const cfg = allConfig[sheetName] || {};
             detailCabang.push(sheetName + ": " + terkirimCount + " (" + (cfg.templateName || "-") + ")");
         }
     }
     
-    let pesan = "RINGKASAN HARIAN\n";
-    pesan += todayStr + "\n\n";
-    pesan += "Total Terkirim: " + totalTerkirim + " pesan\n";
-    pesan += "Cabang Aktif: " + totalCabangAktif + "\n\n";
+    let pesan = "📊 RINGKASAN HARIAN\n";
+    pesan += "📅 " + todayStr + "\n\n";
+    pesan += "📈 Total Terkirim: " + totalTerkirim + " pesan\n";
+    pesan += "🏢 Cabang Aktif: " + totalCabangAktif + "\n\n";
     
     if (detailCabang.length > 0) {
-        pesan += "Detail Cabang:\n";
-        pesan += detailCabang.join("\n");
+        pesan += "📋 Detail Cabang:\n" + detailCabang.join("\n");
     } else {
-        pesan += "Belum ada pengiriman hari ini";
+        pesan += "⚠️ Belum ada pengiriman hari ini";
     }
     
     const url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
