@@ -43,6 +43,28 @@ function onOpen() {
         .addSeparator()
         .addItem("🔍 Debug Firebase Config", "debugFirebaseConfig")
         .addToUi();
+    
+    // Auto-detect User ID dari URL parameter (jika ada)
+    autoDetectUserId();
+}
+
+function autoDetectUserId() {
+    try {
+        const props = PropertiesService.getDocumentProperties();
+        const existingUserId = props.getProperty("FIREBASE_USER_ID");
+        
+        // Jika sudah ada User ID, skip
+        if (existingUserId && existingUserId !== "blast_system") {
+            return;
+        }
+        
+        // Coba ambil dari URL parameter (jika dashboard mengirim)
+        // Note: Apps Script tidak bisa langsung baca URL parameter browser
+        // Jadi kita perlu cara lain...
+        
+    } catch (e) {
+        Logger.log("Error auto-detect User ID: " + e);
+    }
 }
 
 // ------------------------------
@@ -64,6 +86,7 @@ function openFormGlobal() {
     const extraSamplesRaw = props.getProperty("EXTRA_SAMPLES") || "[]";
     const firebaseUrl = props.getProperty("FIREBASE_URL") || "";
     const firebaseSecret = props.getProperty("FIREBASE_SECRET") || "";
+    const firebaseUserId = props.getProperty("FIREBASE_USER_ID") || "";
 
     let extraSamples = [];
     try { extraSamples = JSON.parse(extraSamplesRaw); } catch (e) { }
@@ -132,6 +155,10 @@ function openFormGlobal() {
 
     <div class="sample-section">
       <label style="color:#d97706;">🔥 Firebase Dashboard Integration:</label>
+      
+      <label>User ID / Akun ID (untuk pisah data per cabang):</label>
+      <input type="text" id="firebaseUserId" value="${firebaseUserId}" placeholder="Contoh: 854v5EJsIDS1H55nxDh3EfcIUZ53">
+      
       <label>Firebase URL:</label>
       <input type="text" id="firebaseUrl" value="${firebaseUrl}" placeholder="https://PROJECT-ID-default-rtdb.asia-southeast1.firebasedatabase.app">
       
@@ -139,6 +166,12 @@ function openFormGlobal() {
       <input type="text" id="firebaseSecret" value="${firebaseSecret}" placeholder="Paste Firebase Database Secret">
       
       <div style="font-size:11px;color:#555;margin-top:4px;padding:8px;background:#fef3c7;border-left:3px solid #d97706;line-height:1.6;">
+        <b>ℹ️ User ID / Akun ID:</b><br>
+        - Setiap cabang/spreadsheet harus punya User ID UNIK<br>
+        - User ID ini menentukan folder di Firebase untuk menyimpan pesan<br>
+        - Copy User ID dari dashboard Anda (contoh: 854v5EJsIDS1H55nxDh3EfcIUZ53)<br>
+        - Jika kosong, akan pakai "blast_system" (semua pesan jadi satu)<br><br>
+        
         <b>ℹ️ Cara mendapatkan Firebase Auth:</b><br>
         <b>Opsi 1 - Database Secret (Legacy):</b><br>
         1. Buka <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a><br>
@@ -226,6 +259,7 @@ function openFormGlobal() {
           verifyToken : document.getElementById('verifyToken').value.trim(),
           wabaId : document.getElementById('wabaId').value.trim(),
           noNotif: document.getElementById('noNotif').value.trim(),
+          firebaseUserId: document.getElementById('firebaseUserId').value.trim(),
           firebaseUrl: document.getElementById('firebaseUrl').value.trim(),
           firebaseSecret: document.getElementById('firebaseSecret').value.trim(),
           extraSamples: JSON.stringify(samples)
@@ -255,6 +289,9 @@ function simpanPengaturanGlobal(data) {
     }
     
     // Simpan Firebase config jika ada
+    if (data.firebaseUserId) {
+        props.setProperty("FIREBASE_USER_ID", data.firebaseUserId);
+    }
     if (data.firebaseUrl) {
         props.setProperty("FIREBASE_URL", data.firebaseUrl);
     }
@@ -1182,9 +1219,38 @@ function formatPhoneNumber(phone) {
 function doGet(e) {
     const props = PropertiesService.getDocumentProperties();
     const verifyToken = props.getProperty("WA_VERIFY_TOKEN") || DEFAULTS.WA_VERIFY_TOKEN;
+    
+    // Handle webhook verification
     if (e.parameter['hub.mode'] === 'subscribe' && e.parameter['hub.verify_token'] === verifyToken) {
         return ContentService.createTextOutput(e.parameter['hub.challenge']);
     }
+    
+    // Handle set User ID dari dashboard
+    if (e.parameter.action === 'setUserId' && e.parameter.userId) {
+        try {
+            props.setProperty("FIREBASE_USER_ID", e.parameter.userId);
+            return ContentService.createTextOutput(JSON.stringify({
+                success: true,
+                message: "User ID berhasil disimpan",
+                userId: e.parameter.userId
+            })).setMimeType(ContentService.MimeType.JSON);
+        } catch (err) {
+            return ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                error: err.toString()
+            })).setMimeType(ContentService.MimeType.JSON);
+        }
+    }
+    
+    // Handle get current User ID
+    if (e.parameter.action === 'getUserId') {
+        const userId = props.getProperty("FIREBASE_USER_ID") || "blast_system";
+        return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            userId: userId
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     return ContentService.createTextOutput("Invalid verify token").setStatusCode(403);
 }
 
@@ -1231,8 +1297,10 @@ function debugFirebaseConfig() {
     
     const firebaseUrl = props.getProperty("FIREBASE_URL");
     const firebaseSecret = props.getProperty("FIREBASE_SECRET");
+    const firebaseUserId = props.getProperty("FIREBASE_USER_ID") || "blast_system";
     
     let msg = "=== DEBUG FIREBASE CONFIG ===\n\n";
+    msg += "USER ID: " + firebaseUserId + "\n\n";
     msg += "FIREBASE_URL: " + (firebaseUrl ? "✓ Ada\n" + firebaseUrl : "✗ KOSONG") + "\n\n";
     msg += "FIREBASE_SECRET: " + (firebaseSecret ? "✓ Ada (" + firebaseSecret.substring(0, 10) + "...)" : "✗ Tidak ada (public mode)") + "\n\n";
     
@@ -1251,7 +1319,7 @@ function debugFirebaseConfig() {
             ? firebaseUrl + "/test.json?auth=" + firebaseSecret
             : firebaseUrl + "/test.json";
             
-        const testData = { timestamp: new Date().getTime(), test: true };
+        const testData = { timestamp: new Date().getTime(), test: true, userId: firebaseUserId };
         
         const response = UrlFetchApp.fetch(testUrl, {
             method: "put",
@@ -1265,7 +1333,8 @@ function debugFirebaseConfig() {
         
         if (code === 200) {
             msg += "✅ CONNECTION SUCCESS!\n";
-            msg += "Firebase siap digunakan.\n\n";
+            msg += "Firebase siap digunakan.\n";
+            msg += "Pesan akan disimpan di: conversations/" + firebaseUserId + "/\n\n";
             msg += "Response: " + responseText.substring(0, 100);
         } else {
             msg += "❌ CONNECTION FAILED!\n";
@@ -1306,14 +1375,19 @@ function _getFirebaseConfig() {
 }
 
 function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
+    const props = PropertiesService.getDocumentProperties();
     const fbCfg = _getFirebaseConfig();
     const firebaseUrl = fbCfg.url;
     const firebaseSecret = fbCfg.secret;
+    
+    // Ambil User ID dari properties (untuk pisah data per cabang/akun)
+    const firebaseUserId = props.getProperty("FIREBASE_USER_ID") || "blast_system";
     
     // Log untuk debugging
     Logger.log("=== FIREBASE SAVE ATTEMPT ===");
     Logger.log("Firebase URL: " + (firebaseUrl ? firebaseUrl : "KOSONG"));
     Logger.log("Firebase Secret: " + (firebaseSecret ? "Ada" : "Tidak ada (public mode)"));
+    Logger.log("Firebase User ID: " + firebaseUserId);
     
     if (!firebaseUrl) {
         Logger.log("⚠️ Firebase URL tidak ditemukan - Skip save");
@@ -1364,8 +1438,8 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
         status: status
     };
     
-    // Gunakan user ID default
-    const userKey = "blast_system";
+    // Gunakan User ID dari properties (bukan hardcode)
+    const userKey = firebaseUserId;
     
     // Pastikan URL tidak ada trailing slash
     const baseUrl = firebaseUrl.replace(/\/$/, "");
