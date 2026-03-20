@@ -133,20 +133,33 @@ function openFormGlobal() {
     <div class="sample-section">
       <label style="color:#d97706;">🔥 Firebase Dashboard Integration:</label>
       <label>Firebase URL:</label>
-      <input type="text" id="firebaseUrl" value="${firebaseUrl}" placeholder="https://PROJECT-ID-default-rtdb.firebaseio.com">
+      <input type="text" id="firebaseUrl" value="${firebaseUrl}" placeholder="https://PROJECT-ID-default-rtdb.asia-southeast1.firebasedatabase.app">
       
       <label>Firebase Secret/Auth Token:</label>
-      <input type="text" id="firebaseSecret" value="${firebaseSecret}" placeholder="Paste Firebase Database Secret atau Service Account Token">
+      <input type="text" id="firebaseSecret" value="${firebaseSecret}" placeholder="Paste Firebase Database Secret">
       
       <div style="font-size:11px;color:#555;margin-top:4px;padding:8px;background:#fef3c7;border-left:3px solid #d97706;line-height:1.6;">
-        <b>ℹ️ Cara mendapatkan Firebase Config:</b><br>
+        <b>ℹ️ Cara mendapatkan Firebase Auth:</b><br>
+        <b>Opsi 1 - Database Secret (Legacy):</b><br>
         1. Buka <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a><br>
-        2. Pilih project Anda<br>
-        3. Klik ⚙️ Project Settings → Service Accounts<br>
-        4. Tab "Database secrets" → Copy secret<br>
-        5. Atau gunakan Service Account JSON (lebih aman)<br><br>
-        <b>Format URL:</b> https://[PROJECT-ID]-default-rtdb.firebaseio.com<br>
-        <b>Contoh:</b> https://kirim-chat-default-rtdb.firebaseio.com
+        2. Pilih project → ⚙️ Project Settings → Service Accounts<br>
+        3. Tab "Database secrets" → Show/Copy secret<br><br>
+        
+        <b>Opsi 2 - Atur Rules (Recommended untuk testing):</b><br>
+        1. Firebase Console → Realtime Database → Rules<br>
+        2. Ubah rules menjadi:<br>
+        <code style="display:block;background:#fff;padding:4px;margin:4px 0;font-size:10px;">
+        {<br>
+        &nbsp;&nbsp;"rules": {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;".read": true,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;".write": true<br>
+        &nbsp;&nbsp;}<br>
+        }
+        </code>
+        3. Publish rules<br>
+        4. Kosongkan field "Firebase Secret" di atas (tidak perlu auth)<br><br>
+        
+        <b>URL Format:</b> https://[PROJECT]-default-rtdb.[REGION].firebasedatabase.app
       </div>
     </div>
 
@@ -1221,10 +1234,10 @@ function debugFirebaseConfig() {
     
     let msg = "=== DEBUG FIREBASE CONFIG ===\n\n";
     msg += "FIREBASE_URL: " + (firebaseUrl ? "✓ Ada\n" + firebaseUrl : "✗ KOSONG") + "\n\n";
-    msg += "FIREBASE_SECRET: " + (firebaseSecret ? "✓ Ada (" + firebaseSecret.substring(0, 10) + "...)" : "✗ KOSONG") + "\n\n";
+    msg += "FIREBASE_SECRET: " + (firebaseSecret ? "✓ Ada (" + firebaseSecret.substring(0, 10) + "...)" : "✗ Tidak ada (public mode)") + "\n\n";
     
-    if (!firebaseUrl || !firebaseSecret) {
-        msg += "⚠️ Firebase config belum lengkap!\n";
+    if (!firebaseUrl) {
+        msg += "⚠️ Firebase URL belum diisi!\n";
         msg += "Silakan isi di menu: ⚙️ Pengaturan Global";
         ui.alert(msg);
         return;
@@ -1234,7 +1247,10 @@ function debugFirebaseConfig() {
     msg += "🔄 Testing connection...\n\n";
     
     try {
-        const testUrl = firebaseUrl + "/test.json?auth=" + firebaseSecret;
+        const testUrl = firebaseSecret 
+            ? firebaseUrl + "/test.json?auth=" + firebaseSecret
+            : firebaseUrl + "/test.json";
+            
         const testData = { timestamp: new Date().getTime(), test: true };
         
         const response = UrlFetchApp.fetch(testUrl, {
@@ -1257,12 +1273,18 @@ function debugFirebaseConfig() {
             msg += "Response: " + responseText.substring(0, 200) + "\n\n";
             
             if (code === 401 || code === 403) {
-                msg += "⚠️ Firebase Secret salah atau tidak valid.\n";
-                msg += "Cek di Firebase Console → Project Settings → Service Accounts → Database Secrets";
+                msg += "⚠️ Permission Denied!\n\n";
+                msg += "Solusi:\n";
+                msg += "1. Cek Firebase Rules di Console\n";
+                msg += "2. Atau isi Firebase Secret yang valid\n";
+                msg += "3. Untuk testing, set rules:\n";
+                msg += '   {"rules": {".read": true, ".write": true}}';
             } else if (code === 404) {
-                msg += "⚠️ Firebase URL salah atau database belum aktif.\n";
-                msg += "Format: https://PROJECT-ID-default-rtdb.firebaseio.com\n";
-                msg += "Pastikan Realtime Database sudah dibuat di Firebase Console";
+                msg += "⚠️ URL tidak valid!\n\n";
+                msg += "Format yang benar:\n";
+                msg += "https://PROJECT-default-rtdb.REGION.firebasedatabase.app\n\n";
+                msg += "Contoh:\n";
+                msg += "https://kirim-chat-default-rtdb.asia-southeast1.firebasedatabase.app";
             }
         }
     } catch (e) {
@@ -1291,10 +1313,10 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     // Log untuk debugging
     Logger.log("=== FIREBASE SAVE ATTEMPT ===");
     Logger.log("Firebase URL: " + (firebaseUrl ? firebaseUrl : "KOSONG"));
-    Logger.log("Firebase Secret: " + (firebaseSecret ? "Ada" : "KOSONG"));
+    Logger.log("Firebase Secret: " + (firebaseSecret ? "Ada" : "Tidak ada (public mode)"));
     
-    if (!firebaseUrl || !firebaseSecret) {
-        Logger.log("⚠️ Firebase config tidak ditemukan di Properties - Skip save");
+    if (!firebaseUrl) {
+        Logger.log("⚠️ Firebase URL tidak ditemukan - Skip save");
         return;
     }
     
@@ -1350,7 +1372,11 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     
     // Simpan ke /conversations/{userKey}/{phoneKey}/messages/{timestamp}
     const messagePath = "conversations/" + userKey + "/" + phoneKey + "/messages/" + timestamp;
-    const messageUrl = baseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret;
+    
+    // Build URL dengan atau tanpa auth
+    const messageUrl = firebaseSecret 
+        ? baseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret
+        : baseUrl + "/" + messagePath + ".json";
     
     Logger.log("Mencoba simpan ke Firebase: " + messagePath);
     
@@ -1369,11 +1395,11 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
         Logger.log("Response Firebase (message): " + msgCode);
         
         if (msgCode === 401 || msgCode === 403) {
-            Logger.log("❌ Firebase Auth Error - Secret tidak valid");
+            Logger.log("❌ Firebase Auth Error - Cek Firebase Rules atau Secret");
             Logger.log("Response: " + msgText.substring(0, 200));
             return;
         } else if (msgCode === 404) {
-            Logger.log("❌ Firebase 404 - URL atau path tidak valid");
+            Logger.log("❌ Firebase 404 - URL tidak valid");
             Logger.log("Response: " + msgText.substring(0, 200));
             return;
         } else if (msgCode !== 200) {
@@ -1383,7 +1409,10 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
         }
         
         // Update lastMessage di conversation
-        const convUrl = baseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret;
+        const convUrl = firebaseSecret
+            ? baseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret
+            : baseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json";
+            
         const convResponse = UrlFetchApp.fetch(convUrl, {
             method: "patch",
             contentType: "application/json",
