@@ -1225,14 +1225,35 @@ function doGet(e) {
         return ContentService.createTextOutput(e.parameter['hub.challenge']);
     }
     
+    // Handle test connection
+    if (e.parameter.action === 'test' || e.parameter.action === 'ping') {
+        return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            message: "Connection OK",
+            timestamp: new Date().getTime(),
+            spreadsheetId: SpreadsheetApp.getActiveSpreadsheet().getId(),
+            spreadsheetName: SpreadsheetApp.getActiveSpreadsheet().getName()
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Handle set User ID dari dashboard
     if (e.parameter.action === 'setUserId' && e.parameter.userId) {
         try {
             props.setProperty("FIREBASE_USER_ID", e.parameter.userId);
+            
+            // Juga set Firebase config jika dikirim
+            if (e.parameter.firebaseUrl) {
+                props.setProperty("FIREBASE_URL", e.parameter.firebaseUrl);
+            }
+            if (e.parameter.firebaseSecret) {
+                props.setProperty("FIREBASE_SECRET", e.parameter.firebaseSecret);
+            }
+            
             return ContentService.createTextOutput(JSON.stringify({
                 success: true,
                 message: "User ID berhasil disimpan",
-                userId: e.parameter.userId
+                userId: e.parameter.userId,
+                firebaseUrl: e.parameter.firebaseUrl || props.getProperty("FIREBASE_URL") || null
             })).setMimeType(ContentService.MimeType.JSON);
         } catch (err) {
             return ContentService.createTextOutput(JSON.stringify({
@@ -1242,16 +1263,26 @@ function doGet(e) {
         }
     }
     
-    // Handle get current User ID
-    if (e.parameter.action === 'getUserId') {
+    // Handle get current User ID dan config
+    if (e.parameter.action === 'getUserId' || e.parameter.action === 'getConfig') {
         const userId = props.getProperty("FIREBASE_USER_ID") || "blast_system";
+        const firebaseUrl = props.getProperty("FIREBASE_URL") || null;
+        const hasSecret = !!props.getProperty("FIREBASE_SECRET");
+        
         return ContentService.createTextOutput(JSON.stringify({
             success: true,
-            userId: userId
+            userId: userId,
+            firebaseUrl: firebaseUrl,
+            hasFirebaseSecret: hasSecret,
+            spreadsheetId: SpreadsheetApp.getActiveSpreadsheet().getId(),
+            spreadsheetName: SpreadsheetApp.getActiveSpreadsheet().getName()
         })).setMimeType(ContentService.MimeType.JSON);
     }
     
-    return ContentService.createTextOutput("Invalid verify token").setStatusCode(403);
+    return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: "Invalid action. Available actions: test, setUserId, getUserId, getConfig"
+    })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
