@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 //  WA CLOUD META SENDER - LIBRARY VERSION
 //  Adaptasi fitur per-sheet untuk WhatsApp Cloud API (Meta)
 // ============================================================
@@ -40,6 +40,8 @@ function onOpen() {
         .addItem("⚙️ Pengaturan Global", "openFormGlobal")
         .addItem("📋 Pengaturan Per Sheet", "openFormPerSheet")
         .addItem("🚀 Test Kirim Template (Sheet Aktif)", "testKirim")
+        .addSeparator()
+        .addItem("🔍 Debug Firebase Config", "debugFirebaseConfig")
         .addToUi();
 }
 
@@ -60,6 +62,8 @@ function openFormGlobal() {
     const wabaId = props.getProperty("WA_WABA_ID") || DEFAULTS.WA_WABA_ID;
     const noNotif = props.getProperty("NO_HP_NOTIF") || DEFAULTS.NO_HP_NOTIF;
     const extraSamplesRaw = props.getProperty("EXTRA_SAMPLES") || "[]";
+    const firebaseUrl = props.getProperty("FIREBASE_URL") || "";
+    const firebaseSecret = props.getProperty("FIREBASE_SECRET") || "";
 
     let extraSamples = [];
     try { extraSamples = JSON.parse(extraSamplesRaw); } catch (e) { }
@@ -127,6 +131,19 @@ function openFormGlobal() {
     <input type="text" id="noNotif" value="${noNotif}" placeholder="Contoh: 6282313228875">
 
     <div class="sample-section">
+      <label style="color:#d97706;">🔥 Firebase Dashboard Integration:</label>
+      <label>Firebase URL:</label>
+      <input type="text" id="firebaseUrl" value="${firebaseUrl}" placeholder="https://xxx-default-rtdb.firebaseio.com">
+      
+      <label>Firebase Secret:</label>
+      <input type="text" id="firebaseSecret" value="${firebaseSecret}" placeholder="Firebase Auth Secret">
+      
+      <div style="font-size:11px;color:#555;margin-top:4px;padding:6px;background:#fef3c7;border-left:3px solid #d97706;">
+        ℹ️ Isi Firebase config untuk menyimpan riwayat pesan ke dashboard
+      </div>
+    </div>
+
+    <div class="sample-section">
       <label>Nomor Sample Tambahan (untuk Test Kirim):</label>
       <div id="sampleContainer">${sampleRows}</div>
       <button type="button" class="add" onclick="addSample()">+ Tambah Sample</button>
@@ -189,6 +206,8 @@ function openFormGlobal() {
           verifyToken : document.getElementById('verifyToken').value.trim(),
           wabaId : document.getElementById('wabaId').value.trim(),
           noNotif: document.getElementById('noNotif').value.trim(),
+          firebaseUrl: document.getElementById('firebaseUrl').value.trim(),
+          firebaseSecret: document.getElementById('firebaseSecret').value.trim(),
           extraSamples: JSON.stringify(samples)
         });
     }
@@ -213,6 +232,14 @@ function simpanPengaturanGlobal(data) {
     // Simpan sample tambahan (JSON array)
     if (data.extraSamples) {
         props.setProperty("EXTRA_SAMPLES", data.extraSamples);
+    }
+    
+    // Simpan Firebase config jika ada
+    if (data.firebaseUrl) {
+        props.setProperty("FIREBASE_URL", data.firebaseUrl);
+    }
+    if (data.firebaseSecret) {
+        props.setProperty("FIREBASE_SECRET", data.firebaseSecret);
     }
     
     return "Pengaturan global berhasil disimpan!";
@@ -546,7 +573,6 @@ function sendSemuaSheet() {
     const mapSales = sheetFLP ? _buildSalesMap(sheetFLP) : {};
     const timezone = Session.getScriptTimeZone();
     const todayStr = Utilities.formatDate(new Date(), timezone, "dd/MM/yyyy");
-    const jamSekarang = new Date().getHours();
     const isManual = _isManualRun();
 
     // Jika dijalankan manual (via menu), paksa reset state resume agar proses tidak nyangkut 
@@ -555,6 +581,14 @@ function sendSemuaSheet() {
         props.deleteProperty("RESUME_STATE");
         props.deleteProperty("RESUME_COUNTER");
     }
+
+    const resumeRaw = props.getProperty("RESUME_STATE");
+    let resumeState = resumeRaw ? JSON.parse(resumeRaw) : null;
+
+    // Gunakan jam original jika resume, agar jika ganti jam (misal 08:58 ke 09:02) sheet yang jam=8 tetap diproses
+    const jamSekarang = (resumeState && resumeState.jamOriginal !== undefined) 
+        ? resumeState.jamOriginal 
+        : new Date().getHours();
 
     // Tracking sampling PER SHEET (bukan global per hari)
     // Format: LAST_SAMPLING_DATE_<sheetName> = "dd/MM/yyyy"
@@ -582,9 +616,6 @@ function sendSemuaSheet() {
     let totalCounter = savedCounterRaw
         ? JSON.parse(savedCounterRaw)
         : { success: 0, failed: 0 };
-
-    const resumeRaw = props.getProperty("RESUME_STATE");
-    let resumeState = resumeRaw ? JSON.parse(resumeRaw) : null;
 
     let skipUntilResume = !!resumeState;
     let adaYangDiproses = false;
@@ -654,7 +685,6 @@ function sendSemuaSheet() {
                     let sampleOk = _sendMetaTemplate(sample.hp, cfg, sample.nama, firstNamaSales, hpSales, token, phoneId);
                     if (sampleOk) {
                         monthlyCount++;
-                        props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
                     }
                 });
                 
@@ -674,17 +704,20 @@ function sendSemuaSheet() {
                 
                 // Simpan state saat ini, tapi JANGAN buat resumption trigger
                 // Supaya terhenti (biar lanjut bulan depan, atau manual)
-                props.setProperty("RESUME_STATE", JSON.stringify({ sheetName, rowIndex: i }));
+                props.setProperty("RESUME_STATE", JSON.stringify({ sheetName, rowIndex: i, jamOriginal: jamSekarang }));
                 props.setProperty("RESUME_COUNTER", JSON.stringify(totalCounter));
+                props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
                 
                 _sendNotifikasi(noHpNotif, totalCounter, token, phoneId, true); // Tambah info limit bulanan
                 return;
             }
 
             if (new Date().getTime() - startTime > 270000) {
-                props.setProperty("RESUME_STATE", JSON.stringify({ sheetName, rowIndex: i }));
+                props.setProperty("RESUME_STATE", JSON.stringify({ sheetName, rowIndex: i, jamOriginal: jamSekarang }));
                 props.setProperty("RESUME_COUNTER", JSON.stringify(totalCounter));
+                props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
                 _createResumptionTrigger();
+                SpreadsheetApp.flush();
                 return;
             }
 
@@ -705,10 +738,8 @@ function sendSemuaSheet() {
             if (ok) {
                 totalCounter.success++;
                 monthlyCount++; // tambah 1 ke hitungan bulanan
-                props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
                 
                 sheet.getRange(2 + i, 5).setValue("TERKIRIM");
-                SpreadsheetApp.flush();
 
                 const delayMs = Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
                 Utilities.sleep(delayMs);
@@ -716,13 +747,13 @@ function sendSemuaSheet() {
             } else {
                 totalCounter.failed++;
                 monthlyCount++; // Gagal pun tetap dihitung load dari Meta
-                props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
             }
         }
     }
 
     props.deleteProperty("RESUME_STATE");
     props.deleteProperty("RESUME_COUNTER");
+    props.setProperty("WA_MONTHLY_LIMIT_COUNT", monthlyCount.toString());
     _deleteAllTriggers();
     setupTriggerHarian();
     _sendNotifikasi(noHpNotif, totalCounter, token, phoneId);
@@ -1172,13 +1203,53 @@ function doPost(e) {
 // ============================================================
 //  FIREBASE INTEGRATION - Simpan pesan ke dashboard
 // ============================================================
-function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
+let _cachedFirebaseConfig = null;
+
+function debugFirebaseConfig() {
+    const ui = SpreadsheetApp.getUi();
     const props = PropertiesService.getDocumentProperties();
+    
     const firebaseUrl = props.getProperty("FIREBASE_URL");
     const firebaseSecret = props.getProperty("FIREBASE_SECRET");
     
+    let msg = "=== DEBUG FIREBASE CONFIG ===\n\n";
+    msg += "FIREBASE_URL: " + (firebaseUrl ? "✓ Ada (" + firebaseUrl.substring(0, 30) + "...)" : "✗ KOSONG") + "\n";
+    msg += "FIREBASE_SECRET: " + (firebaseSecret ? "✓ Ada (" + firebaseSecret.substring(0, 10) + "...)" : "✗ KOSONG") + "\n\n";
+    
     if (!firebaseUrl || !firebaseSecret) {
-        Logger.log("Firebase config tidak ditemukan di Properties");
+        msg += "⚠️ Firebase config belum lengkap!\n";
+        msg += "Silakan isi di menu: ⚙️ Pengaturan Global";
+    } else {
+        msg += "✓ Firebase config sudah lengkap\n";
+        msg += "Pesan akan otomatis tersimpan ke Firebase";
+    }
+    
+    ui.alert(msg);
+}
+
+function _getFirebaseConfig() {
+    if (_cachedFirebaseConfig) return _cachedFirebaseConfig;
+    const docProps = PropertiesService.getDocumentProperties();
+    const scriptProps = PropertiesService.getScriptProperties();
+    _cachedFirebaseConfig = {
+        url: docProps.getProperty("FIREBASE_URL") || scriptProps.getProperty("FIREBASE_URL"),
+        secret: docProps.getProperty("FIREBASE_SECRET") || scriptProps.getProperty("FIREBASE_SECRET")
+    };
+    return _cachedFirebaseConfig;
+}
+
+function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
+    const fbCfg = _getFirebaseConfig();
+    const firebaseUrl = fbCfg.url;
+    const firebaseSecret = fbCfg.secret;
+    
+    // Log untuk debugging
+    Logger.log("=== FIREBASE SAVE ATTEMPT ===");
+    Logger.log("Firebase URL: " + (firebaseUrl ? "Ada" : "KOSONG"));
+    Logger.log("Firebase Secret: " + (firebaseSecret ? "Ada" : "KOSONG"));
+    
+    if (!firebaseUrl || !firebaseSecret) {
+        Logger.log("⚠️ Firebase config tidak ditemukan di Properties - Skip save");
         return;
     }
     
@@ -1227,18 +1298,22 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     const messagePath = "conversations/" + userKey + "/" + phoneKey + "/messages/" + timestamp;
     const messageUrl = firebaseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret;
     
+    Logger.log("Mencoba simpan ke Firebase: " + messagePath);
+    
     try {
         // Simpan pesan
-        UrlFetchApp.fetch(messageUrl, {
+        const msgResponse = UrlFetchApp.fetch(messageUrl, {
             method: "put",
             contentType: "application/json",
             payload: JSON.stringify(messageData),
             muteHttpExceptions: true
         });
         
+        Logger.log("Response Firebase (message): " + msgResponse.getResponseCode());
+        
         // Update lastMessage di conversation
         const convUrl = firebaseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret;
-        UrlFetchApp.fetch(convUrl, {
+        const convResponse = UrlFetchApp.fetch(convUrl, {
             method: "patch",
             contentType: "application/json",
             payload: JSON.stringify({
@@ -1251,9 +1326,10 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
             muteHttpExceptions: true
         });
         
-        Logger.log("Berhasil simpan ke Firebase: " + phone + " - " + messagePreview.substring(0, 50));
+        Logger.log("Response Firebase (conversation): " + convResponse.getResponseCode());
+        Logger.log("✓ Berhasil simpan ke Firebase: " + phone + " - " + messagePreview.substring(0, 50));
     } catch (e) {
-        Logger.log("Gagal save ke Firebase: " + e);
+        Logger.log("✗ Gagal save ke Firebase: " + e.toString());
     }
 }
 
