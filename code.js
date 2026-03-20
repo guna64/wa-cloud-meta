@@ -42,29 +42,29 @@ function onOpen() {
         .addItem("🚀 Test Kirim Template (Sheet Aktif)", "testKirim")
         .addSeparator()
         .addItem("🔍 Debug Firebase Config", "debugFirebaseConfig")
+        .addItem("📋 Lihat Web App URL", "showWebAppUrl")
         .addToUi();
-    
-    // Auto-detect User ID dari URL parameter (jika ada)
-    autoDetectUserId();
 }
 
-function autoDetectUserId() {
-    try {
-        const props = PropertiesService.getDocumentProperties();
-        const existingUserId = props.getProperty("FIREBASE_USER_ID");
-        
-        // Jika sudah ada User ID, skip
-        if (existingUserId && existingUserId !== "blast_system") {
-            return;
-        }
-        
-        // Coba ambil dari URL parameter (jika dashboard mengirim)
-        // Note: Apps Script tidak bisa langsung baca URL parameter browser
-        // Jadi kita perlu cara lain...
-        
-    } catch (e) {
-        Logger.log("Error auto-detect User ID: " + e);
-    }
+function showWebAppUrl() {
+    const ui = SpreadsheetApp.getUi();
+    const scriptId = ScriptApp.getScriptId();
+    
+    let msg = "=== WEB APP SETUP ===\n\n";
+    msg += "Untuk menghubungkan dashboard dengan spreadsheet:\n\n";
+    msg += "1. Deploy Web App:\n";
+    msg += "   - Extensions → Apps Script\n";
+    msg += "   - Klik Deploy → New deployment\n";
+    msg += "   - Type: Web app\n";
+    msg += "   - Execute as: Me\n";
+    msg += "   - Who has access: Anyone\n";
+    msg += "   - Deploy\n\n";
+    msg += "2. Copy Web App URL yang muncul\n\n";
+    msg += "3. Di dashboard, panggil API:\n";
+    msg += "   POST: [WEB_APP_URL]?action=setUserId&userId=[USER_ID]\n\n";
+    msg += "Script ID: " + scriptId;
+    
+    ui.alert(msg);
 }
 
 // ------------------------------
