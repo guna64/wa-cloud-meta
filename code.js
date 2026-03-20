@@ -133,13 +133,20 @@ function openFormGlobal() {
     <div class="sample-section">
       <label style="color:#d97706;">🔥 Firebase Dashboard Integration:</label>
       <label>Firebase URL:</label>
-      <input type="text" id="firebaseUrl" value="${firebaseUrl}" placeholder="https://xxx-default-rtdb.firebaseio.com">
+      <input type="text" id="firebaseUrl" value="${firebaseUrl}" placeholder="https://PROJECT-ID-default-rtdb.firebaseio.com">
       
-      <label>Firebase Secret:</label>
-      <input type="text" id="firebaseSecret" value="${firebaseSecret}" placeholder="Firebase Auth Secret">
+      <label>Firebase Secret/Auth Token:</label>
+      <input type="text" id="firebaseSecret" value="${firebaseSecret}" placeholder="Paste Firebase Database Secret atau Service Account Token">
       
-      <div style="font-size:11px;color:#555;margin-top:4px;padding:6px;background:#fef3c7;border-left:3px solid #d97706;">
-        ℹ️ Isi Firebase config untuk menyimpan riwayat pesan ke dashboard
+      <div style="font-size:11px;color:#555;margin-top:4px;padding:8px;background:#fef3c7;border-left:3px solid #d97706;line-height:1.6;">
+        <b>ℹ️ Cara mendapatkan Firebase Config:</b><br>
+        1. Buka <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a><br>
+        2. Pilih project Anda<br>
+        3. Klik ⚙️ Project Settings → Service Accounts<br>
+        4. Tab "Database secrets" → Copy secret<br>
+        5. Atau gunakan Service Account JSON (lebih aman)<br><br>
+        <b>Format URL:</b> https://[PROJECT-ID]-default-rtdb.firebaseio.com<br>
+        <b>Contoh:</b> https://kirim-chat-default-rtdb.firebaseio.com
       </div>
     </div>
 
@@ -1213,15 +1220,53 @@ function debugFirebaseConfig() {
     const firebaseSecret = props.getProperty("FIREBASE_SECRET");
     
     let msg = "=== DEBUG FIREBASE CONFIG ===\n\n";
-    msg += "FIREBASE_URL: " + (firebaseUrl ? "✓ Ada (" + firebaseUrl.substring(0, 30) + "...)" : "✗ KOSONG") + "\n";
+    msg += "FIREBASE_URL: " + (firebaseUrl ? "✓ Ada\n" + firebaseUrl : "✗ KOSONG") + "\n\n";
     msg += "FIREBASE_SECRET: " + (firebaseSecret ? "✓ Ada (" + firebaseSecret.substring(0, 10) + "...)" : "✗ KOSONG") + "\n\n";
     
     if (!firebaseUrl || !firebaseSecret) {
         msg += "⚠️ Firebase config belum lengkap!\n";
         msg += "Silakan isi di menu: ⚙️ Pengaturan Global";
-    } else {
-        msg += "✓ Firebase config sudah lengkap\n";
-        msg += "Pesan akan otomatis tersimpan ke Firebase";
+        ui.alert(msg);
+        return;
+    }
+    
+    // Test connection ke Firebase
+    msg += "🔄 Testing connection...\n\n";
+    
+    try {
+        const testUrl = firebaseUrl + "/test.json?auth=" + firebaseSecret;
+        const testData = { timestamp: new Date().getTime(), test: true };
+        
+        const response = UrlFetchApp.fetch(testUrl, {
+            method: "put",
+            contentType: "application/json",
+            payload: JSON.stringify(testData),
+            muteHttpExceptions: true
+        });
+        
+        const code = response.getResponseCode();
+        const responseText = response.getContentText();
+        
+        if (code === 200) {
+            msg += "✅ CONNECTION SUCCESS!\n";
+            msg += "Firebase siap digunakan.\n\n";
+            msg += "Response: " + responseText.substring(0, 100);
+        } else {
+            msg += "❌ CONNECTION FAILED!\n";
+            msg += "HTTP Code: " + code + "\n\n";
+            msg += "Response: " + responseText.substring(0, 200) + "\n\n";
+            
+            if (code === 401 || code === 403) {
+                msg += "⚠️ Firebase Secret salah atau tidak valid.\n";
+                msg += "Cek di Firebase Console → Project Settings → Service Accounts → Database Secrets";
+            } else if (code === 404) {
+                msg += "⚠️ Firebase URL salah atau database belum aktif.\n";
+                msg += "Format: https://PROJECT-ID-default-rtdb.firebaseio.com\n";
+                msg += "Pastikan Realtime Database sudah dibuat di Firebase Console";
+            }
+        }
+    } catch (e) {
+        msg += "❌ ERROR: " + e.toString();
     }
     
     ui.alert(msg);
@@ -1245,11 +1290,17 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     
     // Log untuk debugging
     Logger.log("=== FIREBASE SAVE ATTEMPT ===");
-    Logger.log("Firebase URL: " + (firebaseUrl ? "Ada" : "KOSONG"));
+    Logger.log("Firebase URL: " + (firebaseUrl ? firebaseUrl : "KOSONG"));
     Logger.log("Firebase Secret: " + (firebaseSecret ? "Ada" : "KOSONG"));
     
     if (!firebaseUrl || !firebaseSecret) {
         Logger.log("⚠️ Firebase config tidak ditemukan di Properties - Skip save");
+        return;
+    }
+    
+    // Validasi format URL
+    if (!firebaseUrl.includes("firebaseio.com") && !firebaseUrl.includes("firebasedatabase.app")) {
+        Logger.log("⚠️ Format Firebase URL tidak valid - Skip save");
         return;
     }
     
@@ -1281,7 +1332,7 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     
     // Data pesan lengkap
     const messageData = {
-        text: messagePreview.substring(0, 200), // Batasi 200 karakter
+        text: messagePreview.substring(0, 200),
         timestamp: timestamp,
         type: "template",
         templateName: cfg.templateName,
@@ -1294,9 +1345,12 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
     // Gunakan user ID default
     const userKey = "blast_system";
     
+    // Pastikan URL tidak ada trailing slash
+    const baseUrl = firebaseUrl.replace(/\/$/, "");
+    
     // Simpan ke /conversations/{userKey}/{phoneKey}/messages/{timestamp}
     const messagePath = "conversations/" + userKey + "/" + phoneKey + "/messages/" + timestamp;
-    const messageUrl = firebaseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret;
+    const messageUrl = baseUrl + "/" + messagePath + ".json?auth=" + firebaseSecret;
     
     Logger.log("Mencoba simpan ke Firebase: " + messagePath);
     
@@ -1309,10 +1363,27 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
             muteHttpExceptions: true
         });
         
-        Logger.log("Response Firebase (message): " + msgResponse.getResponseCode());
+        const msgCode = msgResponse.getResponseCode();
+        const msgText = msgResponse.getContentText();
+        
+        Logger.log("Response Firebase (message): " + msgCode);
+        
+        if (msgCode === 401 || msgCode === 403) {
+            Logger.log("❌ Firebase Auth Error - Secret tidak valid");
+            Logger.log("Response: " + msgText.substring(0, 200));
+            return;
+        } else if (msgCode === 404) {
+            Logger.log("❌ Firebase 404 - URL atau path tidak valid");
+            Logger.log("Response: " + msgText.substring(0, 200));
+            return;
+        } else if (msgCode !== 200) {
+            Logger.log("❌ Firebase Error " + msgCode);
+            Logger.log("Response: " + msgText.substring(0, 200));
+            return;
+        }
         
         // Update lastMessage di conversation
-        const convUrl = firebaseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret;
+        const convUrl = baseUrl + "/conversations/" + userKey + "/" + phoneKey + ".json?auth=" + firebaseSecret;
         const convResponse = UrlFetchApp.fetch(convUrl, {
             method: "patch",
             contentType: "application/json",
@@ -1326,8 +1397,12 @@ function _saveMessageToFirebase(phone, cfg, namaKonsumen, namaSales, status) {
             muteHttpExceptions: true
         });
         
-        Logger.log("Response Firebase (conversation): " + convResponse.getResponseCode());
-        Logger.log("✓ Berhasil simpan ke Firebase: " + phone + " - " + messagePreview.substring(0, 50));
+        const convCode = convResponse.getResponseCode();
+        Logger.log("Response Firebase (conversation): " + convCode);
+        
+        if (convCode === 200) {
+            Logger.log("✓ Berhasil simpan ke Firebase: " + phone + " - " + messagePreview.substring(0, 50));
+        }
     } catch (e) {
         Logger.log("✗ Gagal save ke Firebase: " + e.toString());
     }
